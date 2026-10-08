@@ -1,15 +1,18 @@
 import sqlite3
 from datetime import date
 
-DB_NAME = "game_data.db"
+DB_NAME = "arcade.db"
+
+def get_connection():
+    return sqlite3.connect(DB_NAME, check_same_thread=False)
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
-            username TEXT,
+            name TEXT,
             score INTEGER DEFAULT 0,
             last_daily TEXT
         )
@@ -17,60 +20,80 @@ def init_db():
     conn.commit()
     conn.close()
 
-def get_or_create_user(user_id, username):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT score FROM users WHERE user_id = ?", (user_id,))
-    row = c.fetchone()
+def get_or_create_user(user_id, name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id, name, score, last_daily FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    
     if not row:
-        c.execute("INSERT INTO users (user_id, username, score) VALUES (?, ?, ?)", (user_id, username, 0))
+        cursor.execute("INSERT INTO users (user_id, name, score, last_daily) VALUES (?, ?, 0, '')", (user_id, name))
         conn.commit()
-        score = 0
+        data = {"user_id": user_id, "name": name, "score": 0, "last_daily": ""}
     else:
-        # Username update agar user ne Telegram pe naam badal liya ho
-        c.execute("UPDATE users SET username = ? WHERE user_id = ?", (username, user_id))
-        conn.commit()
-        score = row[0]
+        # Agar user ne apna telegram display name change kiya ho toh update kar dega
+        if row[1] != name:
+            cursor.execute("UPDATE users SET name = ? WHERE user_id = ?", (name, user_id))
+            conn.commit()
+        data = {"user_id": row[0], "name": name, "score": row[2], "last_daily": row[3]}
+        
     conn.close()
-    return score
+    return data
 
 def update_score(user_id, delta):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    # Ensure user exists pehle
-    c.execute("SELECT score FROM users WHERE user_id = ?", (user_id,))
-    if not c.fetchone():
-        c.execute("INSERT INTO users (user_id, username, score) VALUES (?, ?, ?)", (user_id, "Player", 0))
-    
-    c.execute("UPDATE users SET score = score + ? WHERE user_id = ?", (delta, user_id))
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET score = MAX(0, score + ?) WHERE user_id = ?", (delta, user_id))
     conn.commit()
-    c.execute("SELECT score FROM users WHERE user_id = ?", (user_id,))
-    new_score = c.fetchone()[0]
+    cursor.execute("SELECT score FROM users WHERE user_id = ?", (user_id,))
+    new_score = cursor.fetchone()[0]
     conn.close()
     return new_score
 
-def claim_daily_bonus(user_id):
+def claim_daily(user_id):
     today = str(date.today())
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT last_daily FROM users WHERE user_id = ?", (user_id,))
-    row = c.fetchone()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT last_daily, score FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+
     if row and row[0] == today:
         conn.close()
-        return False, "Aapne aaj ka bonus pehle hi claim kar liya hai!"
-    
-    c.execute("UPDATE users SET score = score + 500, last_daily = ? WHERE user_id = ?", (today, user_id))
-    conn.commit()
-    c.execute("SELECT score FROM users WHERE user_id = ?", (user_id,))
-    total = c.fetchone()[0]
-    conn.close()
-    return True, total
+        return False, row[1]
 
-def get_top_players(limit=10):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT username, score FROM users ORDER BY score DESC LIMIT ?", (limit,))
-    rows = c.fetchall()
+    cursor.execute("UPDATE users SET score = score + 500, last_daily = ? WHERE user_id = ?", (today, user_id))
+    conn.commit()
+    cursor.execute("SELECT score FROM users WHERE user_id = ?", (user_id,))
+    new_score = cursor.fetchone()[0]
+    conn.close()
+    return True, new_score
+
+def get_leaderboard(limit=10):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, score FROM users ORDER BY score DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
     conn.close()
     return rows
-  
+
+def get_user_stats(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, score FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        return None
+
+    # Global Rank count
+    cursor.execute("SELECT COUNT(*) + 1 FROM users WHERE score > ?", (row[1],))
+    rank = cursor.fetchone()[0]
+    conn.close()
+
+    return {
+        "name": row[0],
+        "score": row[1],
+        "rank": rank
+    }
+    
