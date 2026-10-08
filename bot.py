@@ -35,34 +35,20 @@ def run_flask():
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     db.get_or_create_user(user.id, user.first_name)
-    msg = (
-        f"🎮 *Welcome to itz360 Arcade, {user.first_name}!* 🎮\n\n"
-        "• 🥊 `/maut` - 2D Fighting Mini App\n"
-        "• ⚔️ `/mautfight <coins>` - PvP Coin Duel\n"
-        "• ♟️ `/chess` - 1v1 PvP Chess\n"
-        "• 🗡️ `/fight` - Duel\n"
-        "• 🪙 `/toss` - Toss\n"
-        "• 🎲 `/dice` - Dice\n"
-        "• ❌ `/ttt` - Tic-Tac-Toe\n"
-        "• 🔤 `/scramble` - Word Game\n"
-        "• 🎯 `/guess` - Number Guess\n"
-        "• 💰 `/score` - Wallet\n"
-        "• 🎁 `/daily` - Daily Reward"
-    )
-    await update.message.reply_text(msg, parse_mode="Markdown")
+    msg = "🎮 Welcome to itz360 Arcade!\n\n/maut - Mini App\n/mautfight <coins> - Duel"
+    await update.message.reply_text(msg)
 
 async def score_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     u = db.get_or_create_user(user.id, user.first_name)
     score = u.get('score', 0) if isinstance(u, dict) else 0
-    wins = u.get('wins', 0) if isinstance(u, dict) else 0
-    await update.message.reply_text(f"👤 *Player:* {user.first_name}\n💰 *Coins:* {score}\n🏆 *Wins:* {wins}", parse_mode="Markdown")
+    await update.message.reply_text(f"Coins: {score}")
 
 async def daily_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     db.get_or_create_user(user.id, user.first_name)
     db.update_score(user.id, 100)
-    await update.message.reply_text("🎁 *Daily Bonus Claimed!* +100 Coins 🪙", parse_mode="Markdown")
+    await update.message.reply_text("Bonus: +100 Coins!")
 
 async def maut_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -70,21 +56,15 @@ async def maut_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     db.get_or_create_user(user.id, user.first_name)
     url = "https://itz-360-bot.onrender.com/maut360"
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🥊 Play MAUT 360 ⚔️", web_app=WebAppInfo(url=url))]])
-    await update.message.reply_text(f"🥊 *MAUT 360 ARENA*\nFighter: {user.first_name}\nStage: 50 Levels", reply_markup=kb, parse_mode="Markdown")
+    kb = InlineKeyboardMarkup([[InlineKeyboardButton("Play MAUT 360", web_app=WebAppInfo(url=url))]])
+    await update.message.reply_text("MAUT 360", reply_markup=kb)
 
 def main():
     token = os.environ.get("BOT_TOKEN")
     if not token:
-        print("BOT_TOKEN missing!")
         return
-
-    flask_t = threading.Thread(target=run_flask)
-    flask_t.daemon = True
-    flask_t.start()
-
+    threading.Thread(target=run_flask, daemon=True).start()
     app = ApplicationBuilder().token(token).build()
-
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CommandHandler("score", score_cmd))
     app.add_handler(CommandHandler("daily", daily_cmd))
@@ -99,8 +79,6 @@ def main():
     app.add_handler(CallbackQueryHandler(ttt_callback, pattern=r"^ttt_"))
     app.add_handler(CommandHandler("guess", guess_cmd))
     app.add_handler(CommandHandler("scramble", scramble_cmd))
-
-    print("Bot is live!")
     app.run_polling()
 
 if __name__ == "__main__":
