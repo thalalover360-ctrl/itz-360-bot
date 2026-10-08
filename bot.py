@@ -15,7 +15,7 @@ from dice import dice_cmd
 from guess import guess_cmd
 from scramble import scramble_cmd
 from tictactoe import ttt_cmd, ttt_callback
-from battle import fight_cmd, fight_callback
+from battle import fight_cmd
 from chess_pvp import chess_cmd
 from maut_pvp import maut_fight_cmd, maut_pvp_callback
 
@@ -109,7 +109,6 @@ def main():
     app.add_handler(CommandHandler("mautfight", maut_fight_cmd))
     app.add_handler(CallbackQueryHandler(maut_pvp_callback, pattern=r"^mpvp_"))
     app.add_handler(CommandHandler("fight", fight_cmd))
-    app.add_handler(CallbackQueryHandler(fight_callback, pattern=r"^fight_"))
     app.add_handler(CommandHandler("ttt", ttt_cmd))
     app.add_handler(CallbackQueryHandler(ttt_callback, pattern=r"^ttt_"))
     app.add_handler(CommandHandler("guess", guess_cmd))
