@@ -18,9 +18,9 @@ import tictactoe
 import scramble
 import dice
 import battle
+import chess_pvp
 
-# --- 24/7 FLASK KEEPER & CHESS WEB APP ROUTE ---
-# template_folder="." ka matlab chess.html seedha root repo se render hogi
+# --- 24/7 FLASK KEEPER ---
 flask_app = Flask(__name__, template_folder=".")
 
 @flask_app.route("/")
@@ -42,12 +42,13 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
         f"👋 *Welcome to itz-360 Arcade, {user.first_name}!* 🎮\n\n"
         "🕹️ *Active Games:*\n"
-        "1. ⚔️ `/fight` — 1v1 PvP Arena Duel (+500 / -250)\n"
-        "2. 🪙 `/toss` — Coin Toss (+200 / -100)\n"
-        "3. 🎯 `/guess` — Number Guessing (1 to 500)\n"
-        "4. ❌ `/ttt` — Tic-Tac-Toe vs Bot (+300 / -150)\n"
-        "5. 🔤 `/scramble` — Hard Word Scramble (+350)\n"
-        "6. 🎲 `/dice` — Lucky 7 Dice Challenge (+500 / +200)\n\n"
+        "1. ♟️ `/chess` — 1v1 Live Visual Chess with Friends\n"
+        "2. ⚔️ `/fight` — 1v1 PvP Arena Duel (+500 / -250)\n"
+        "3. 🪙 `/toss` — Coin Toss (+200 / -100)\n"
+        "4. 🎯 `/guess` — Number Guessing (1 to 500)\n"
+        "5. ❌ `/ttt` — Tic-Tac-Toe vs Bot (+300 / -150)\n"
+        "6. 🔤 `/scramble` — Hard Word Scramble (+350)\n"
+        "7. 🎲 `/dice` — Lucky 7 Dice Challenge (+500 / +200)\n\n"
         "📊 *Profile & Rewards:*\n"
         "📜 `/scorecard` — Player ID Card & Global Rank\n"
         "💰 `/score` — Instant Balance Check\n"
@@ -145,6 +146,7 @@ def main():
     app.add_handler(CommandHandler("leaderboard", leaderboard_cmd))
 
     # Game Commands
+    app.add_handler(CommandHandler("chess", chess_pvp.chess_cmd))
     app.add_handler(CommandHandler("fight", battle.fight_cmd))
     app.add_handler(CommandHandler("toss", toss.toss_cmd))
     app.add_handler(CommandHandler("guess", guess.guess_cmd))
