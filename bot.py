@@ -11,100 +11,131 @@ from telegram.ext import (
     ContextTypes
 )
 
-# Local imports (ye files hum aage step-by-step banayenge)
 import database as db
 import toss
 import guess
-import dice
-import scramble
 import tictactoe
+import scramble
+import dice
 
-# --- Render ke liye Dummy Web Server ---
-web_app = Flask(__name__)
+# --- 24/7 FLASK KEEPER (For Render & cron-job.org) ---
+flask_app = Flask(__name__)
 
-@web_app.route("/")
+@flask_app.route("/")
 def home():
-    return "itz-360 Bot is Running 24/7!"
+    return "itz-360 Bot is Online 24/7!"
 
-def run_web():
+def run_flask():
     port = int(os.environ.get("PORT", 8080))
-    web_app.run(host="0.0.0.0", port=port)
+    flask_app.run(host="0.0.0.0", port=port)
 
-# --- Core Commands ---
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# --- USER COMMANDS ---
+async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     db.get_or_create_user(user.id, user.first_name)
-    
-    welcome_text = (
-        f"🎮 *itz-360 Arcade me Swagat hai, {user.first_name}!* 🎮\n\n"
-        "Yahan hain aapke 5 Zabardast Games:\n"
-        "1. 🪙 `/toss` - Coin Toss (+200 / -100)\n"
-        "2. 🎯 `/guess` - Guess The Number (1 to 500, 10 Moves)\n"
-        "3. ❌ `/ttt` - Tic-Tac-Toe (Zero Kaata)\n"
-        "4. 🔤 `/scramble` - Word Scramble Challenge\n"
-        "5. 🎲 `/dice` - Lucky Dice Roll\n\n"
-        "Other Commands:\n"
-        "💰 `/score` - Apna Score Dekhein\n"
-        "🎁 `/daily` - Daily +500 Free Bonus\n"
-        "🏆 `/leaderboard` - Group ke Top 10 Players"
+    msg = (
+        f"👋 *Welcome to itz-360 Arcade, {user.first_name}!* 🎮\n\n"
+        "🕹️ *5 Dhamakedar Games:*\n"
+        "1. 🪙 `/toss` — Coin Toss (+200 / -100)\n"
+        "2. 🎯 `/guess` — Number Guessing (1 se 500)\n"
+        "3. ❌ `/ttt` — Tic-Tac-Toe vs Bot (+300 / -150)\n"
+        "4. 🔤 `/scramble` — Word Scramble (+250)\n"
+        "5. 🎲 `/dice` — Lucky 7 Dice (+500 / +200)\n\n"
+        "📊 *Profile & Rewards:*\n"
+        "📜 `/scorecard` — Player ID Card & Rank\n"
+        "💰 `/score` — Instant Balance\n"
+        "🎁 `/daily` — Free +500 Daily Bonus\n"
+        "🏆 `/leaderboard` — Top 10 Hall of Fame"
     )
-    await update.message.reply_text(welcome_text, parse_mode="Markdown")
+    await update.message.reply_text(msg, parse_mode="Markdown")
 
-async def score_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def score_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    points = db.get_or_create_user(user.id, user.first_name)
-    await update.message.reply_text(f"💰 {user.first_name}, aapka total score: *{points} Points*", parse_mode="Markdown")
+    data = db.get_or_create_user(user.id, user.first_name)
+    await update.message.reply_text(f"💰 *{user.first_name}*, current score: *{data['score']:,} pts*", parse_mode="Markdown")
 
-async def daily_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def scorecard_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     db.get_or_create_user(user.id, user.first_name)
-    success, result = db.claim_daily_bonus(user.id)
-    if success:
-        await update.message.reply_text(f"🎁 *Daily Bonus!* +500 points claim hue.\nKul Score: *{result} Points*", parse_mode="Markdown")
-    else:
-        await update.message.reply_text(f"⚠️ {result}")
+    stats = db.get_user_stats(user.id)
 
-async def leaderboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    top_players = db.get_top_players(10)
-    if not top_players:
-        await update.message.reply_text("Abhi tak kisi ne koi points nahi banaye!")
+    pts = stats["score"]
+    if pts < 1000:
+        tier = "🥉 Bronze Rookie"
+    elif pts < 3000:
+        tier = "🥈 Silver Pro"
+    elif pts < 7000:
+        tier = "🥇 Gold Master"
+    elif pts < 15000:
+        tier = "💎 Diamond Champion"
+    else:
+        tier = "👑 Arcade Legend"
+
+    card = (
+        "╔══════════════════════╗\n"
+        "   🎮 *ITZ-360 SCORECARD* 🎮\n"
+        "╚══════════════════════╝\n\n"
+        f"👤 *Player:* `{stats['name']}`\n"
+        f"🎖️ *Tier:* {tier}\n"
+        f"🏆 *Global Rank:* `#{stats['rank']}`\n"
+        f"💰 *Points:* `{pts:,} pts`\n\n"
+        "──────────────────────\n"
+        "🔥 *Tip:* Roz `/daily` claim karein aur games jeet kar leaderboard par chadhayein!"
+    )
+    await update.message.reply_text(card, parse_mode="Markdown")
+
+async def daily_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    db.get_or_create_user(user.id, user.first_name)
+    claimed, new_score = db.claim_daily(user.id)
+    if claimed:
+        await update.message.reply_text(f"🎁 *Daily Bonus Claimed!* Aapko mile *+500 pts*!\nTotal Score: *{new_score:,} pts*", parse_mode="Markdown")
+    else:
+        await update.message.reply_text("⏳ Aaj ka daily bonus aap pehle hi claim kar chuke hain. Kal subah wapas aayein!", parse_mode="Markdown")
+
+async def leaderboard_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    top_users = db.get_leaderboard()
+    if not top_users:
+        await update.message.reply_text("Leaderboard abhi khali hai. Game khel kar rank banayein!")
         return
-    
-    text = "🏆 *itz-360 TOP 10 PLAYERS* 🏆\n\n"
-    medals = ["🥇", "🥈", "🥉"]
-    for i, (name, score) in enumerate(top_players, 1):
-        rank = medals[i-1] if i <= 3 else f"{i}."
-        text += f"{rank} *{name}*: `{score} pts`\n"
+
+    medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+    text = "🏆 *ITZ-360 LEADERBOARD* 🏆\n\n"
+    for idx, (name, sc) in enumerate(top_users):
+        m = medals[idx] if idx < len(medals) else f"{idx+1}."
+        text += f"{m} *{name}* — `{sc:,} pts`\n"
     await update.message.reply_text(text, parse_mode="Markdown")
 
-# --- Central Message Handler (Guess & Scramble ke text guesses ke liye) ---
-async def central_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Message Router (Guess & Scramble ke input sambhalne ke liye)
+async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
-    
-    # Pehle Word Scramble check karega, agar word solve hua to guess check nahi karega
     handled = await scramble.handle_scramble_guess(update, context)
     if not handled:
         await guess.handle_guess_number(update, context)
 
+# --- BOT INITIALIZER ---
 def main():
-    # Database initialize karein
     db.init_db()
 
-    TOKEN = os.getenv("BOT_TOKEN")
-    if not TOKEN:
-        raise ValueError("BOT_TOKEN environment variable nahi mila!")
+    # Flask web server start
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
 
-    # Flask web server background thread me start karein
-    threading.Thread(target=run_web, daemon=True).start()
+    token = os.environ.get("BOT_TOKEN")
+    if not token:
+        print("ERROR: BOT_TOKEN Environment Variable nahi mila!")
+        return
 
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(token).build()
 
-    # Core System Handlers
-    app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("score", score_command))
-    app.add_handler(CommandHandler("daily", daily_command))
-    app.add_handler(CommandHandler("leaderboard", leaderboard_command))
+    # Command Handlers
+    app.add_handler(CommandHandler("start", start_cmd))
+    app.add_handler(CommandHandler("score", score_cmd))
+    app.add_handler(CommandHandler("scorecard", scorecard_cmd))
+    app.add_handler(CommandHandler("profile", scorecard_cmd))
+    app.add_handler(CommandHandler("daily", daily_cmd))
+    app.add_handler(CommandHandler("leaderboard", leaderboard_cmd))
 
     # Game Handlers
     app.add_handler(CommandHandler("toss", toss.toss_cmd))
@@ -113,15 +144,15 @@ def main():
     app.add_handler(CommandHandler("scramble", scramble.scramble_cmd))
     app.add_handler(CommandHandler("dice", dice.dice_cmd))
 
-    # All Button Callbacks Route
+    # Inline Button Callbacks
     app.add_handler(CallbackQueryHandler(toss.toss_callback, pattern="^toss_"))
-    app.add_handler(CallbackQueryHandler(dice.dice_callback, pattern="^dice_"))
     app.add_handler(CallbackQueryHandler(tictactoe.ttt_callback, pattern="^ttt_"))
+    app.add_handler(CallbackQueryHandler(dice.dice_callback, pattern="^dice_"))
 
-    # Chat Messages Router (Number Guesses + Word Guesses)
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), central_text_handler))
+    # Text Guessing Handler
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), text_handler))
 
-    print("itz-360 Modular Bot live ho raha hai...")
+    print("itz-360 Bot polling running successfully...")
     app.run_polling()
 
 if __name__ == "__main__":
