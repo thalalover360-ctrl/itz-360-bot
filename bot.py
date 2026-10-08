@@ -1,6 +1,6 @@
 import os
 import threading
-from flask import Flask
+from flask import Flask, render_template
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -19,12 +19,17 @@ import scramble
 import dice
 import battle
 
-# --- 24/7 FLASK KEEPER (For Render & UptimeRobot) ---
-flask_app = Flask(__name__)
+# --- 24/7 FLASK KEEPER & CHESS WEB APP ROUTE ---
+# template_folder="." ka matlab chess.html seedha root repo se render hogi
+flask_app = Flask(__name__, template_folder=".")
 
 @flask_app.route("/")
 def home():
     return "itz-360 Bot is Online 24/7!"
+
+@flask_app.route("/chess-app")
+def chess_page():
+    return render_template("chess.html")
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -120,7 +125,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     db.init_db()
 
-    # Flask web server
+    # Flask web server start
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
 
