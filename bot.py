@@ -13,7 +13,7 @@ from telegram.ext import (
 import database as db
 from toss import toss_cmd
 from dice import dice_cmd
-from guess import guess_cmd, guess_callback
+from guess import guess_cmd
 from scramble import scramble_cmd, scramble_callback
 from tictactoe import ttt_cmd, ttt_callback
 from battle import fight_cmd, fight_callback
@@ -81,8 +81,7 @@ async def daily_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🎁 *Daily Bonus Claimed!*\n+100 Coins aapke balance me add ho gaye! 🪙",
         parse_mode="Markdown"
     )
-    
-async def maut_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def maut_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user:
         return
@@ -143,7 +142,6 @@ def main():
     app.add_handler(CallbackQueryHandler(ttt_callback, pattern=r"^ttt_"))
 
     app.add_handler(CommandHandler("guess", guess_cmd))
-    app.add_handler(CallbackQueryHandler(guess_callback, pattern=r"^guess_"))
 
     app.add_handler(CommandHandler("scramble", scramble_cmd))
     app.add_handler(CallbackQueryHandler(scramble_callback, pattern=r"^scramble_"))
