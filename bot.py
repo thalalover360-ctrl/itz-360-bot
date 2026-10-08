@@ -13,7 +13,7 @@ import database as db
 from toss import toss_cmd
 from dice import dice_cmd
 from guess import guess_cmd
-from scramble import scramble_cmd, scramble_callback
+from scramble import scramble_cmd
 from tictactoe import ttt_cmd, ttt_callback
 from battle import fight_cmd, fight_callback
 from chess_pvp import chess_cmd
@@ -114,7 +114,6 @@ def main():
     app.add_handler(CallbackQueryHandler(ttt_callback, pattern=r"^ttt_"))
     app.add_handler(CommandHandler("guess", guess_cmd))
     app.add_handler(CommandHandler("scramble", scramble_cmd))
-    app.add_handler(CallbackQueryHandler(scramble_callback, pattern=r"^scramble_"))
 
     print("Bot is live!")
     app.run_polling()
