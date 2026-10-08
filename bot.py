@@ -1,5 +1,7 @@
 import os
 import random
+import threading
+from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -8,10 +10,20 @@ from telegram.ext import (
     ContextTypes
 )
 
-# Token Render se automatically aayega
-TOKEN = os.getenv("BOT_TOKEN")
+# --- Render ke liye Dummy Web Server ---
+web_app = Flask(__name__)
 
-# Points track karne ke liye {user_id: score}
+@web_app.route("/")
+def home():
+    return "itz-360 Bot is Running 24/7!"
+
+def run_web():
+    port = int(os.environ.get("PORT", 8080))
+    web_app.run(host="0.0.0.0", port=port)
+
+# ----------------------------------------
+
+TOKEN = os.getenv("BOT_TOKEN")
 user_scores = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -98,6 +110,9 @@ def main():
     if not TOKEN:
         raise ValueError("BOT_TOKEN variable nahi mila!")
 
+    # Flask web server ko background thread me chalayein
+    threading.Thread(target=run_web, daemon=True).start()
+
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -112,4 +127,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-  
+    
