@@ -9,7 +9,6 @@ from telegram.ext import (
     ContextTypes
 )
 
-# Custom Game Modules
 import database as db
 from toss import toss_cmd
 from dice import dice_cmd
@@ -20,7 +19,6 @@ from battle import fight_cmd, fight_callback
 from chess_pvp import chess_cmd
 from maut_pvp import maut_fight_cmd, maut_pvp_callback
 
-# Flask Web Server
 web_app = Flask(__name__)
 
 @web_app.route('/')
@@ -39,7 +37,6 @@ def run_flask():
     port = int(os.environ.get("PORT", 8080))
     web_app.run(host="0.0.0.0", port=port)
 
-# General Commands
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     db.get_or_create_user(user.id, user.first_name)
@@ -74,7 +71,8 @@ async def daily_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.get_or_create_user(user.id, user.first_name)
     db.update_score(user.id, 100)
     await update.message.reply_text("🎁 *Daily Bonus Claimed!* +100 Coins 🪙", parse_mode="Markdown")
-    async def maut_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def maut_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user:
         return
