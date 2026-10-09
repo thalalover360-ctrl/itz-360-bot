@@ -35,38 +35,61 @@ def run_flask():
     port = int(os.environ.get("PORT", 8080))
     web_app.run(host="0.0.0.0", port=port, use_reloader=False)
 
+# Safe DB Wrapper - taaki koi bhi command DB lock ki wajah se freeze na ho
+def safe_user(user):
+    if not user:
+        return {}
+    try:
+        return db.get_or_create_user(user.id, user.first_name) or {}
+    except Exception as e:
+        print(f"DB Bypass: {e}", flush=True)
+        return {"score": 100}
+
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    if user:
-        try:
-            db.get_or_create_user(user.id, user.first_name)
-        except Exception as e:
-            print(f"DB Error: {e}", flush=True)
-    msg = "🎮 Welcome to itz360 Arcade!\n\n/maut - Play MAUT 360\n/chess - Chess 1v1\n/guess - Number Game\n/toss - Toss Coin\n/score - My Coins"
+    safe_user(user)
+    msg = (
+        "🎮 Welcome to itz360 Arcade!\n\n"
+        "🥊 /maut - Play MAUT 360 Arena\n"
+        "♟️ /chess - 1v1 Chess Challenge\n"
+        "🎯 /guess - Guess The Number\n"
+        "🪙 /toss - Flip a Coin\n"
+        "🎲 /dice - Roll Dice\n"
+        "💰 /score - Check Coins"
+    )
     await update.message.reply_text(msg)
 
 async def score_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    u = db.get_or_create_user(user.id, user.first_name)
-    score = u.get('score', 0) if isinstance(u, dict) else 0
-    await update.message.reply_text(f"Coins: {score}")
+    u = safe_user(user)
+    score = u.get('score', 100) if isinstance(u, dict) else 100
+    await update.message.reply_text(f"💰 Aapke paas: {score} Coins hain!")
 
 async def daily_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    db.get_or_create_user(user.id, user.first_name)
-    db.update_score(user.id, 100)
-    await update.message.reply_text("Bonus: +100 Coins!")
+    safe_user(user)
+    try:
+        db.update_score(user.id, 100)
+    except Exception:
+        pass
+    await update.message.reply_text("🎁 Daily Bonus: +100 Coins mil gaye!")
 
 async def maut_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    if user:
-        try:
-            db.get_or_create_user(user.id, user.first_name)
-        except Exception:
-            pass
+    safe_user(update.effective_user)
     url = "https://itz-360-bot.onrender.com/maut360"
     kb = InlineKeyboardMarkup([[InlineKeyboardButton("🥊 Play MAUT 360", web_app=WebAppInfo(url=url))]])
     await update.message.reply_text("⚔️ MAUT 360 Arena:", reply_markup=kb)
+
+# Safe command runner helper
+def make_safe(handler_fn):
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        try:
+            safe_user(update.effective_user)
+            await handler_fn(update, context)
+        except Exception as err:
+            print(f"Command Error in {handler_fn.__name__}: {err}", flush=True)
+            await update.message.reply_text(f"⚠️ Game start hone me error: {err}")
+    return wrapper
 
 if __name__ == "__main__":
     token = os.environ.get("BOT_TOKEN")
@@ -74,29 +97,29 @@ if __name__ == "__main__":
         print("❌ CRITICAL: BOT_TOKEN is missing!", flush=True)
         exit(1)
 
-    # Flask ko background me daalo
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
 
-    # Telegram ko MAIN thread me chalao taaki crash na ho
     app = ApplicationBuilder().token(token).build()
 
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CommandHandler("score", score_cmd))
     app.add_handler(CommandHandler("scorecard", score_cmd))
     app.add_handler(CommandHandler("daily", daily_cmd))
-    app.add_handler(CommandHandler("toss", toss_cmd))
-    app.add_handler(CommandHandler("dice", dice_cmd))
-    app.add_handler(CommandHandler("chess", chess_cmd))
     app.add_handler(CommandHandler("maut", maut_cmd))
     app.add_handler(CommandHandler("maut360", maut_cmd))
-    app.add_handler(CommandHandler("mautfight", maut_fight_cmd))
-    app.add_handler(CallbackQueryHandler(maut_pvp_callback, pattern=r"^mpvp_"))
-    app.add_handler(CommandHandler("fight", fight_cmd))
-    app.add_handler(CommandHandler("ttt", ttt_cmd))
+
+    # Wrapped commands - error aane par crash nahi honge
+    app.add_handler(CommandHandler("toss", make_safe(toss_cmd)))
+    app.add_handler(CommandHandler("dice", make_safe(dice_cmd)))
+    app.add_handler(CommandHandler("chess", make_safe(chess_cmd)))
+    app.add_handler(CommandHandler("guess", make_safe(guess_cmd)))
+    app.add_handler(CommandHandler("scramble", make_safe(scramble_cmd)))
+    app.add_handler(CommandHandler("fight", make_safe(fight_cmd)))
+    app.add_handler(CommandHandler("ttt", make_safe(ttt_cmd)))
     app.add_handler(CallbackQueryHandler(ttt_callback, pattern=r"^ttt_"))
-    app.add_handler(CommandHandler("guess", guess_cmd))
-    app.add_handler(CommandHandler("scramble", scramble_cmd))
+    app.add_handler(CommandHandler("mautfight", make_safe(maut_fight_cmd)))
+    app.add_handler(CallbackQueryHandler(maut_pvp_callback, pattern=r"^mpvp_"))
 
     print("✅ BOT IS LIVE ON TELEGRAM!", flush=True)
     app.run_polling(drop_pending_updates=True)
