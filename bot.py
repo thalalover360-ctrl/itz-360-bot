@@ -35,7 +35,6 @@ def run_flask():
     port = int(os.environ.get("PORT", 8080))
     web_app.run(host="0.0.0.0", port=port, use_reloader=False)
 
-# Safe DB Wrapper - taaki koi bhi command DB lock ki wajah se freeze na ho
 def safe_user(user):
     if not user:
         return {}
@@ -49,15 +48,16 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     safe_user(user)
     msg = (
-        "🎮 Welcome to itz360 Arcade!\n\n"
-        "🥊 /maut - Play MAUT 360 Arena\n"
+        "🎮 *Welcome to itz360 Arcade!*\n\n"
+        "🥊 /maut - Play MAUT 360 Mini App\n"
+        "⚔️ /mautfight - Duel Fight with Friend / Levels\n"
         "♟️ /chess - 1v1 Chess Challenge\n"
         "🎯 /guess - Guess The Number\n"
         "🪙 /toss - Flip a Coin\n"
         "🎲 /dice - Roll Dice\n"
         "💰 /score - Check Coins"
     )
-    await update.message.reply_text(msg)
+    await update.message.reply_text(msg, parse_mode="Markdown")
 
 async def score_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -74,13 +74,12 @@ async def daily_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
     await update.message.reply_text("🎁 Daily Bonus: +100 Coins mil gaye!")
 
-async def maut_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def maut_app_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     safe_user(update.effective_user)
     url = "https://itz-360-bot.onrender.com/maut360"
     kb = InlineKeyboardMarkup([[InlineKeyboardButton("🥊 Play MAUT 360", web_app=WebAppInfo(url=url))]])
     await update.message.reply_text("⚔️ MAUT 360 Arena:", reply_markup=kb)
 
-# Safe command runner helper
 def make_safe(handler_fn):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
@@ -102,14 +101,19 @@ if __name__ == "__main__":
 
     app = ApplicationBuilder().token(token).build()
 
+    # Base commands
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CommandHandler("score", score_cmd))
     app.add_handler(CommandHandler("scorecard", score_cmd))
     app.add_handler(CommandHandler("daily", daily_cmd))
-    app.add_handler(CommandHandler("maut", maut_cmd))
-    app.add_handler(CommandHandler("maut360", maut_cmd))
 
-    # Wrapped commands - error aane par crash nahi honge
+    # MAUT Handlers (Web App + Group Duel)
+    app.add_handler(CommandHandler("maut", make_safe(maut_app_cmd)))
+    app.add_handler(CommandHandler("maut360", make_safe(maut_app_cmd)))
+    app.add_handler(CommandHandler("mautfight", make_safe(maut_fight_cmd)))
+    app.add_handler(CallbackQueryHandler(maut_pvp_callback, pattern=r"^mpvp_"))
+
+    # Other arcade games
     app.add_handler(CommandHandler("toss", make_safe(toss_cmd)))
     app.add_handler(CommandHandler("dice", make_safe(dice_cmd)))
     app.add_handler(CommandHandler("chess", make_safe(chess_cmd)))
@@ -118,8 +122,6 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("fight", make_safe(fight_cmd)))
     app.add_handler(CommandHandler("ttt", make_safe(ttt_cmd)))
     app.add_handler(CallbackQueryHandler(ttt_callback, pattern=r"^ttt_"))
-    app.add_handler(CommandHandler("mautfight", make_safe(maut_fight_cmd)))
-    app.add_handler(CallbackQueryHandler(maut_pvp_callback, pattern=r"^mpvp_"))
 
     print("✅ BOT IS LIVE ON TELEGRAM!", flush=True)
     app.run_polling(drop_pending_updates=True)
