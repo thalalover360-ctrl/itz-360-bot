@@ -1,8 +1,11 @@
 import os
 import threading
 import logging
-from flask import Flask, render_template
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+import random
+import string
+import time
+from flask import Flask, render_template, request, jsonify
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 import database as db
@@ -13,11 +16,14 @@ from scramble import scramble_cmd
 from tictactoe import ttt_cmd, ttt_callback
 from battle import fight_cmd
 from chess_pvp import chess_cmd
-from maut_pvp import maut_fight_cmd, maut_pvp_callback
+from maut_pvp import maut_pvp_callback
 
 logging.basicConfig(level=logging.INFO)
 
 web_app = Flask(__name__)
+
+# Real-time Web PvP Rooms Memory
+ROOMS = {}
 
 @web_app.route('/')
 def home():
@@ -30,6 +36,36 @@ def chess_view():
 @web_app.route('/maut360')
 def maut360_view():
     return render_template('maut360.html')
+
+# Multiplayer Sync API Endpoints
+@web_app.route('/api/room/state', methods=['GET'])
+def get_room_state():
+    room_id = request.args.get('room')
+    if not room_id or room_id not in ROOMS:
+        return jsonify({"status": "solo"})
+    return jsonify(ROOMS[room_id])
+
+@web_app.route('/api/room/action', methods=['POST'])
+def post_room_action():
+    data = request.json or {}
+    room_id = data.get('room')
+    role = data.get('role') # 'p1' or 'p2'
+    action = data.get('action') # 'punch', 'kick', 'jump', 'move_left', 'move_right', 'idle'
+
+    if not room_id or room_id not in ROOMS:
+        return jsonify({"status": "error"}), 400
+
+    room = ROOMS[room_id]
+    room[f'{role}_last_act'] = action
+    room[f'{role}_time'] = time.time()
+
+    # Apply Damage
+    if action in ['punch', 'kick']:
+        dmg = 15 if action == 'punch' else 25
+        target = 'p2_hp' if role == 'p1' else 'p1_hp'
+        room[target] = max(0, room[target] - dmg)
+
+    return jsonify({"status": "ok", "state": room})
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -49,8 +85,7 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     safe_user(user)
     msg = (
         "🎮 *Welcome to itz360 Arcade!*\n\n"
-        "🥊 /maut - Play MAUT 360 Mini App\n"
-        "⚔️ /mautfight - Duel Fight with Friend / Levels\n"
+        "🥊 /maut - MAUT 360 (Visual Fight & PvP)\n"
         "♟️ /chess - 1v1 Chess Challenge\n"
         "🎯 /guess - Guess The Number\n"
         "🪙 /toss - Flip a Coin\n"
@@ -74,11 +109,42 @@ async def daily_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
     await update.message.reply_text("🎁 Daily Bonus: +100 Coins mil gaye!")
 
-async def maut_app_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    safe_user(update.effective_user)
-    url = "https://itz-360-bot.onrender.com/maut360"
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🥊 Play MAUT 360", web_app=WebAppInfo(url=url))]])
-    await update.message.reply_text("⚔️ MAUT 360 Arena:", reply_markup=kb)
+# Visual PvP Room Creator
+async def maut_room_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    safe_user(user)
+    
+    room_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+    ROOMS[room_code] = {
+        "p1_name": user.first_name,
+        "p2_name": "Waiting...",
+        "p1_hp": 100,
+        "p2_hp": 100,
+        "p1_last_act": "idle",
+        "p2_last_act": "idle",
+        "p1_time": time.time(),
+        "p2_time": time.time()
+    }
+
+    base_url = "https://itz-360-bot.onrender.com/maut360"
+    p1_url = f"{base_url}?room={room_code}&role=p1"
+    p2_url = f"{base_url}?room={room_code}&role=p2"
+    solo_url = f"{base_url}"
+
+    kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"🥊 Join as {user.first_name} (P1)", url=p1_url)],
+        [InlineKeyboardButton("⚔️ Join Fight (P2 / Kaju)", url=p2_url)],
+        [InlineKeyboardButton("🤖 Play Solo vs Computer", url=solo_url)]
+    ])
+
+    msg = (
+        f"💀 *MAUT 360 REAL DUEL ARENA* 💀\n\n"
+        f"Host: *{user.first_name}*\n"
+        f"Room Code: `{room_code}`\n\n"
+        f"👉 *{user.first_name}* P1 dabaye aur friend/Kaju P2 dabaye!\n"
+        f"Dono ke screens par real time fight start hogi!"
+    )
+    await update.message.reply_text(msg, reply_markup=kb, parse_mode="Markdown")
 
 def make_safe(handler_fn):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -101,19 +167,17 @@ if __name__ == "__main__":
 
     app = ApplicationBuilder().token(token).build()
 
-    # Base commands
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CommandHandler("score", score_cmd))
-    app.add_handler(CommandHandler("scorecard", score_cmd))
     app.add_handler(CommandHandler("daily", daily_cmd))
 
-    # MAUT Handlers (Web App + Group Duel)
-    app.add_handler(CommandHandler("maut", make_safe(maut_app_cmd)))
-    app.add_handler(CommandHandler("maut360", make_safe(maut_app_cmd)))
-    app.add_handler(CommandHandler("mautfight", make_safe(maut_fight_cmd)))
+    # Real Visual MAUT Arena Command
+    app.add_handler(CommandHandler("maut", make_safe(maut_room_cmd)))
+    app.add_handler(CommandHandler("maut360", make_safe(maut_room_cmd)))
+    app.add_handler(CommandHandler("mautfight", make_safe(maut_room_cmd)))
     app.add_handler(CallbackQueryHandler(maut_pvp_callback, pattern=r"^mpvp_"))
 
-    # Other arcade games
+    # Baaki arcade games
     app.add_handler(CommandHandler("toss", make_safe(toss_cmd)))
     app.add_handler(CommandHandler("dice", make_safe(dice_cmd)))
     app.add_handler(CommandHandler("chess", make_safe(chess_cmd)))
@@ -125,4 +189,3 @@ if __name__ == "__main__":
 
     print("✅ BOT IS LIVE ON TELEGRAM!", flush=True)
     app.run_polling(drop_pending_updates=True)
-    
