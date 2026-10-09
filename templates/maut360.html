@@ -3,83 +3,101 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MAUT 360 Cyber Arena</title>
+<title>MAUT 360 - Arena Combat</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-  body { background: #05050a; color: #fff; font-family: 'Courier New', Courier, monospace; overflow: hidden; touch-action: none; }
-  
+  body { background: #0b0e14; color: #fff; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; touch-action: none; }
+
   #hud {
     position: absolute; top: 0; left: 0; width: 100vw; height: 75px;
+    background: #11151f; border-bottom: 2px solid #202738;
     display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 15px; background: rgba(5, 5, 12, 0.85); backdrop-filter: blur(4px);
-    border-bottom: 2px solid #00f2fe; z-index: 10;
+    padding: 10px 16px; z-index: 10;
   }
-  .bar-container { width: 130px; }
-  .name-tag { font-size: 11px; font-weight: 900; letter-spacing: 1px; margin-bottom: 4px; text-transform: uppercase; }
-  .hp-bg { width: 100%; height: 14px; background: #1a1a24; border: 1.5px solid #fff; border-radius: 4px; overflow: hidden; }
-  .hp-fill { height: 100%; width: 100%; transition: width 0.15s ease-out; }
-  #p-hp { background: linear-gradient(90deg, #00f2fe, #4facfe); box-shadow: 0 0 10px #00f2fe; }
-  #e-hp { background: linear-gradient(90deg, #ff0844, #ff4b2b); box-shadow: 0 0 10px #ff0844; }
+  .fighter-info { width: 38%; }
+  .name { font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 5px; }
+  .hp-bar-bg { width: 100%; height: 16px; background: #222736; border-radius: 8px; overflow: hidden; border: 1.5px solid #333d54; }
+  .hp-bar-fill { height: 100%; width: 100%; transition: width 0.15s ease-out; }
+  #p-hp { background: linear-gradient(90deg, #00c6ff, #0072ff); }
+  #e-hp { background: linear-gradient(90deg, #ff416c, #ff4b2b); }
 
   #center-badge { text-align: center; }
-  #vs-text { font-size: 18px; font-weight: 900; color: #ffeb3b; text-shadow: 0 0 10px #ffeb3b; }
-  #combo-counter { font-size: 12px; color: #00f2fe; font-weight: bold; min-height: 14px; }
+  #lvl-badge { font-size: 14px; font-weight: 900; color: #f1c40f; }
+  #status-text { font-size: 11px; color: #8892b0; margin-top: 2px; }
 
-  #gameCanvas { display: block; width: 100vw; height: calc(100vh - 170px); margin-top: 75px; background: #000; }
+  #gameCanvas {
+    display: block; width: 100vw; height: calc(100vh - 225px);
+    margin-top: 75px; background: #161b26;
+  }
 
   #controls {
-    position: absolute; bottom: 0; left: 0; width: 100vw; height: 170px;
+    position: absolute; bottom: 0; left: 0; width: 100vw; height: 150px;
+    background: #0d1118; border-top: 2px solid #202738;
     display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 18px; background: #080911; border-top: 2px solid #1a1c2e; z-index: 10;
+    padding: 10px 20px; z-index: 10;
   }
-  .d-pad { display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 48px); gap: 6px; }
-  .action-pad { display: grid; grid-template-columns: repeat(2, 58px); grid-template-rows: repeat(2, 48px); gap: 8px; }
-  .ctrl-btn {
-    background: #121422; border: 2px solid #272c47; color: #fff; font-size: 17px;
-    font-weight: 900; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  .pad-group { display: flex; gap: 10px; }
+  .btn {
+    width: 60px; height: 60px; border-radius: 14px; font-size: 20px; font-weight: 900;
+    background: #1c2230; color: #fff; border: 2px solid #2f384d;
+    display: flex; align-items: center; justify-content: center;
   }
-  .ctrl-btn:active { transform: scale(0.92); background: #3b436d; }
-  .btn-slash { border-color: #00f2fe; color: #00f2fe; box-shadow: inset 0 0 8px rgba(0,242,254,0.3); }
-  .btn-smash { border-color: #ff0844; color: #ff0844; box-shadow: inset 0 0 8px rgba(255,8,68,0.3); }
-  .btn-surge { border-color: #ffd200; color: #ffd200; }
-  .btn-jump { border-color: #a8ff78; color: #a8ff78; }
+  .btn:active { transform: scale(0.92); background: #2f384d; }
+  .btn-atk { border-color: #ff4757; color: #ff6b81; }
+  .btn-atk:active { background: #ff4757; color: #fff; }
+  .btn-def { border-color: #2ed573; color: #2ed573; }
+  .btn-def:active { background: #2ed573; color: #000; }
+
+  #overlay {
+    position: absolute; inset: 0; background: rgba(5, 7, 12, 0.88);
+    display: none; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 20;
+  }
+  #overlay h1 { font-size: 34px; font-weight: 900; margin-bottom: 12px; }
+  #overlay p { font-size: 15px; color: #a4b0be; margin-bottom: 24px; }
+  #overlay button {
+    padding: 14px 28px; font-size: 16px; font-weight: 800; border-radius: 12px;
+    border: none; background: #0072ff; color: #fff; cursor: pointer;
+  }
 </style>
 </head>
 <body>
 
   <div id="hud">
-    <div class="bar-container">
-      <div class="name-tag" style="color: #00f2fe;">CYBER BLADE</div>
-      <div class="hp-bg"><div id="p-hp" class="hp-fill"></div></div>
+    <div class="fighter-info">
+      <div class="name" style="color: #00c6ff;">PLAYER</div>
+      <div class="hp-bar-bg"><div id="p-hp" class="hp-bar-fill"></div></div>
     </div>
     <div id="center-badge">
-      <div id="vs-text">VS</div>
-      <div id="combo-counter"></div>
+      <div id="lvl-badge">LEVEL 1</div>
+      <div id="status-text">FIGHT!</div>
     </div>
-    <div class="bar-container" style="text-align: right;">
-      <div class="name-tag" style="color: #ff0844;">MECHA WARLORD</div>
-      <div class="hp-bg"><div id="e-hp" class="hp-fill"></div></div>
+    <div class="fighter-info" style="text-align: right;">
+      <div class="name" style="color: #ff4757;">BOSS</div>
+      <div class="hp-bar-bg"><div id="e-hp" class="hp-bar-fill"></div></div>
     </div>
   </div>
 
   <canvas id="gameCanvas"></canvas>
 
   <div id="controls">
-    <div class="d-pad">
-      <div></div>
-      <button class="ctrl-btn btn-surge" id="b-surge">⚡</button>
-      <div></div>
-      <button class="ctrl-btn" id="b-left">◀</button>
-      <button class="ctrl-btn" id="b-down">▼</button>
-      <button class="ctrl-btn" id="b-right">▶</button>
+    <div class="pad-group">
+      <button class="btn" id="b-left">◀</button>
+      <button class="btn" id="b-right">▶</button>
+      <button class="btn" id="b-jump">⬆</button>
     </div>
-    <div class="action-pad">
-      <button class="ctrl-btn btn-slash" id="b-slash">🗡️</button>
-      <button class="ctrl-btn btn-smash" id="b-smash">💥</button>
-      <button class="ctrl-btn btn-jump" id="b-jump">⬆</button>
-      <button class="ctrl-btn btn-surge" id="b-aura">🔥</button>
+    <div class="pad-group">
+      <button class="btn btn-def" id="b-shield">🛡️</button>
+      <button class="btn btn-atk" id="b-punch">👊</button>
+      <button class="btn btn-atk" id="b-kick">🦵</button>
     </div>
+  </div>
+
+  <div id="overlay">
+    <h1 id="res-title">VICTORY</h1>
+    <p id="res-sub">Boss defeated cleanly!</p>
+    <button id="res-btn" onclick="nextRound()">NEXT LEVEL</button>
   </div>
 
 <script>
@@ -88,228 +106,245 @@ const ctx = canvas.getContext("2d");
 
 function resize() {
   canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight - 245;
+  canvas.height = window.innerHeight - 225;
 }
 window.addEventListener("resize", resize);
 resize();
 
-const groundY = () => canvas.height - 30;
-let shakeTime = 0;
-let combo = 0;
-let comboReset = 0;
+let level = 1;
+let gameOver = false;
+const floorY = () => canvas.height - 35;
 
-const p = { x: 70, y: 100, vx: 0, vy: 0, w: 36, h: 70, hp: 100, maxHp: 100, act: "idle", actT: 0, face: 1, aura: false };
-const boss = { x: canvas.width - 100, y: 100, vx: 0, vy: 0, w: 42, h: 80, hp: 100, maxHp: 100, act: "idle", actT: 0, face: -1 };
+const player = {
+  x: 60, y: 100, vx: 0, vy: 0, w: 32, h: 65,
+  hp: 100, maxHp: 100, state: "idle", timer: 0, face: 1, isDef: false
+};
 
-const slashes = [];
-const particles = [];
-const keys = {};
+const boss = {
+  x: canvas.width - 100, y: 100, vx: 0, vy: 0, w: 34, h: 68,
+  hp: 100, maxHp: 100, state: "idle", timer: 0, face: -1, isDef: false
+};
 
-function addBtn(id, downFn, upFn) {
+const hits = [];
+const keys = { left: false, right: false };
+
+function bind(id, onStart, onEnd) {
   const el = document.getElementById(id);
-  const press = (e) => { e.preventDefault(); downFn(); };
-  const release = (e) => { e.preventDefault(); if(upFn) upFn(); };
-  el.addEventListener("touchstart", press);
-  el.addEventListener("touchend", release);
-  el.addEventListener("mousedown", press);
-  el.addEventListener("mouseup", release);
+  el.addEventListener("touchstart", (e) => { e.preventDefault(); onStart(); });
+  el.addEventListener("touchend", (e) => { e.preventDefault(); if (onEnd) onEnd(); });
+  el.addEventListener("mousedown", (e) => { e.preventDefault(); onStart(); });
+  el.addEventListener("mouseup", (e) => { e.preventDefault(); if (onEnd) onEnd(); });
 }
 
-addBtn("b-left", () => keys.left = true, () => keys.left = false);
-addBtn("b-right", () => keys.right = true, () => keys.right = false);
-addBtn("b-down", () => keys.down = true, () => keys.down = false);
-addBtn("b-jump", () => { if (p.y >= groundY() - p.h - 4) p.vy = -14; });
-addBtn("b-surge", () => { p.vx = p.face * 14; addSparks(p.x, p.y + 40, "#00f2fe", 12); });
-addBtn("b-aura", () => { p.aura = !p.aura; });
+bind("b-left", () => keys.left = true, () => keys.left = false);
+bind("b-right", () => keys.right = true, () => keys.right = false);
+bind("b-jump", () => {
+  if (player.y >= floorY() - player.h - 2) player.vy = -13;
+});
+bind("b-shield", () => player.isDef = true, () => player.isDef = false);
+bind("b-punch", () => doStrike("punch", 16, 12));
+bind("b-kick", () => doStrike("kick", 24, 16));
 
-addBtn("b-slash", () => triggerStrike("slash", 18, 14));
-addBtn("b-smash", () => triggerStrike("smash", 28, 20));
+function doStrike(type, dmg, duration) {
+  if (player.timer > 0 || gameOver) return;
+  player.state = type;
+  player.timer = duration;
 
-function triggerStrike(type, dmg, duration) {
-  if (p.actT > 0) return;
-  p.act = type;
-  p.actT = duration;
-
-  const hitRange = type === "slash" ? 75 : 90;
-  if (Math.abs(p.x - boss.x) < hitRange && Math.abs(p.y - boss.y) < 55) {
-    boss.hp -= dmg * (p.aura ? 1.5 : 1);
-    boss.vx = p.face * 8;
-    shakeTime = 8;
-    combo++;
-    comboReset = 90;
-    document.getElementById("combo-counter").innerText = `${combo}x COMBO!`;
-    addSparks(boss.x, boss.y + 35, "#ff0844", 15);
+  const dist = Math.abs(player.x - boss.x);
+  const vDist = Math.abs(player.y - boss.y);
+  if (dist < 65 && vDist < 50) {
+    const actualDmg = boss.isDef ? Math.floor(dmg * 0.3) : dmg;
+    boss.hp -= actualDmg;
+    boss.vx = player.face * 7;
+    addHit(boss.x, boss.y + 25, `-${actualDmg}`);
   }
 }
 
-function addSparks(x, y, color, count=8) {
-  for (let i = 0; i < count; i++) {
-    particles.push({
-      x, y,
-      vx: (Math.random() - 0.5) * 8,
-      vy: (Math.random() - 0.5) * 8,
-      life: 20, color, size: Math.random() * 4 + 2
-    });
-  }
+function addHit(x, y, text) {
+  hits.push({ x, y, text, life: 25 });
 }
 
-function drawCityBg() {
-  ctx.fillStyle = "#0c0d18";
-  for (let i = 0; i < canvas.width; i += 45) {
-    let bh = 70 + (Math.sin(i) * 30 + 40);
-    ctx.fillRect(i, groundY() - bh, 38, bh);
-    ctx.fillStyle = "rgba(0, 242, 254, 0.15)";
-    ctx.fillRect(i + 8, groundY() - bh + 15, 6, 8);
-    ctx.fillRect(i + 22, groundY() - bh + 35, 6, 8);
-    ctx.fillStyle = "#0c0d18";
-  }
-  ctx.fillStyle = "#181a2e";
-  ctx.fillRect(0, groundY(), canvas.width, canvas.height - groundY());
-  ctx.strokeStyle = "#00f2fe";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, groundY()); ctx.lineTo(canvas.width, groundY());
-  ctx.stroke();
-}
-
-function drawWarrior(obj, color, isBoss) {
+function drawFighter(char, color, isBoss) {
   ctx.save();
-  ctx.translate(obj.x, obj.y);
+  ctx.translate(char.x, char.y);
 
-  if (obj.aura) {
-    ctx.shadowColor = "#ffd200";
-    ctx.shadowBlur = 20;
-  }
-
-  // Aura Flames
-  if (obj.aura) {
-    ctx.strokeStyle = "#ffd200";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-obj.w/2 - 4, -4, obj.w + 8, obj.h + 8);
-  }
-
-  // Armor Body
   ctx.fillStyle = color;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 12;
-
-  // Head / Helmet
-  ctx.fillRect(-10, 0, 20, 16);
-  ctx.fillStyle = "#fff";
-  // Visor
-  ctx.fillRect(obj.face === 1 ? 2 : -8, 5, 8, 3);
-
-  // Chest / Armor
-  ctx.fillStyle = isBoss ? "#8a0c28" : "#0d5573";
-  ctx.fillRect(-12, 18, 24, 28);
-
-  // Cape/Scarf
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(-obj.face * 8, 18);
-  ctx.lineTo(-obj.face * 26 + Math.sin(Date.now() / 90) * 4, 34);
+  ctx.arc(0, 10, 11, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(char.face === 1 ? 2 : -7, 7, 6, 3);
+
+  ctx.fillStyle = isBoss ? "#8a1928" : "#124b7a";
+  ctx.fillRect(-10, 22, 20, 26);
+
+  ctx.fillStyle = color;
+  ctx.fillRect(-10, 36, 20, 4);
+
+  if (char.isDef) {
+    ctx.strokeStyle = "#2ed573";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(char.face * 8, 30, 26, -0.4 * Math.PI, 0.4 * Math.PI, char.face === -1);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  if (char.state === "punch") {
+    ctx.moveTo(0, 26);
+    ctx.lineTo(char.face * 28, 26);
+  } else {
+    ctx.moveTo(0, 26);
+    ctx.lineTo(char.face * 10, 34);
+  }
   ctx.stroke();
 
-  // Legs
-  ctx.fillStyle = "#222";
-  ctx.fillRect(-10, 46, 8, 24);
-  ctx.fillRect(2, 46, 8, 24);
-
-  // Sword Attack Frame
-  if (obj.act === "slash") {
-    ctx.strokeStyle = "#fff";
-    ctx.shadowColor = "#00f2fe";
-    ctx.shadowBlur = 15;
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.arc(obj.face * 15, 25, 40, -0.6 * Math.PI, 0.4 * Math.PI, obj.face === -1);
-    ctx.stroke();
-  } else if (obj.act === "smash") {
-    ctx.fillStyle = "#ffeb3b";
-    ctx.shadowColor = "#ff0844";
-    ctx.shadowBlur = 20;
-    ctx.fillRect(obj.face * 18, 10, 25, 25);
+  ctx.beginPath();
+  if (char.state === "kick") {
+    ctx.moveTo(0, 48);
+    ctx.lineTo(char.face * 30, 42);
+    ctx.moveTo(0, 48);
+    ctx.lineTo(-4, 65);
+  } else {
+    ctx.moveTo(-5, 48); ctx.lineTo(-6, 65);
+    ctx.moveTo(5, 48);  ctx.lineTo(6, 65);
   }
+  ctx.stroke();
 
   ctx.restore();
+}
+
+function update() {
+  if (gameOver) return;
+
+  if (keys.left) { player.vx = -4.5; player.face = -1; }
+  else if (keys.right) { player.vx = 4.5; player.face = 1; }
+  else player.vx *= 0.7;
+
+  player.vy += 0.65;
+  player.x += player.vx;
+  player.y += player.vy;
+
+  if (player.y + player.h >= floorY()) { player.y = floorY() - player.h; player.vy = 0; }
+  if (player.x < 25) player.x = 25;
+  if (player.x > canvas.width - 25) player.x = canvas.width - 25;
+
+  if (player.timer > 0) player.timer--;
+  else player.state = "idle";
+
+  const dist = player.x - boss.x;
+  boss.face = dist > 0 ? 1 : -1;
+  const speed = 1.6 + (level * 0.25);
+
+  if (Math.abs(dist) > 55) {
+    boss.x += boss.face * speed;
+  } else {
+    if (Math.random() < 0.03 + (level * 0.01) && boss.timer === 0) {
+      const atkType = Math.random() > 0.4 ? "punch" : "kick";
+      boss.state = atkType;
+      boss.timer = 15;
+      const bDmg = atkType === "punch" ? (10 + level * 2) : (16 + level * 2);
+      const actual = player.isDef ? Math.floor(bDmg * 0.2) : bDmg;
+      player.hp -= actual;
+      player.vx = -boss.face * 6;
+      addHit(player.x, player.y + 25, `-${actual}`);
+    }
+  }
+
+  boss.vy += 0.65;
+  boss.y += boss.vy;
+  boss.x += boss.vx;
+  boss.vx *= 0.8;
+  if (boss.y + boss.h >= floorY()) { boss.y = floorY() - boss.h; boss.vy = 0; }
+
+  if (boss.timer > 0) boss.timer--;
+  else boss.state = "idle";
+
+  for (let i = hits.length - 1; i >= 0; i--) {
+    hits[i].y -= 1.2;
+    hits[i].life--;
+    if (hits[i].life <= 0) hits.splice(i, 1);
+  }
+
+  document.getElementById("p-hp").style.width = Math.max(0, (player.hp / player.maxHp) * 100) + "%";
+  document.getElementById("e-hp").style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
+
+  if (boss.hp <= 0) {
+    showOverlay(true);
+  } else if (player.hp <= 0) {
+    showOverlay(false);
+  }
+}
+
+function showOverlay(isWin) {
+  gameOver = true;
+  const overlay = document.getElementById("overlay");
+  const title = document.getElementById("res-title");
+  const sub = document.getElementById("res-sub");
+  const btn = document.getElementById("res-btn");
+
+  overlay.style.display = "flex";
+  if (isWin) {
+    title.innerText = "VICTORY! 🏆";
+    title.style.color = "#00c6ff";
+    sub.innerText = `You defeated Boss Level ${level}!`;
+    btn.innerText = "NEXT LEVEL";
+  } else {
+    title.innerText = "DEFEAT! 💀";
+    title.style.color = "#ff4757";
+    sub.innerText = "Aap haar gaye! Dubara shuru karein.";
+    btn.innerText = "RESTART";
+  }
+}
+
+function nextRound() {
+  const overlay = document.getElementById("overlay");
+  overlay.style.display = "none";
+  gameOver = false;
+
+  if (player.hp <= 0) {
+    level = 1;
+  } else {
+    level++;
+  }
+
+  document.getElementById("lvl-badge").innerText = `LEVEL ${level}`;
+  player.hp = 100;
+  player.x = 60;
+
+  boss.maxHp = 100 + (level - 1) * 25;
+  boss.hp = boss.maxHp;
+  boss.x = canvas.width - 80;
+}
+
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#1e2433";
+  ctx.fillRect(0, floorY(), canvas.width, canvas.height - floorY());
+  ctx.strokeStyle = "#38435d";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, floorY()); ctx.lineTo(canvas.width, floorY());
+  ctx.stroke();
+
+  drawFighter(player, "#00c6ff", false);
+  drawFighter(boss, "#ff4757", true);
+
+  hits.forEach(h => {
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 15px sans-serif";
+    ctx.fillText(h.text, h.x - 10, h.y);
+  });
 }
 
 function loop() {
-  if (keys.left) { p.vx = -5; p.face = -1; }
-  else if (keys.right) { p.vx = 5; p.face = 1; }
-  else p.vx *= 0.75;
-
-  p.vy += 0.7;
-  p.x += p.vx; p.y += p.vy;
-
-  if (p.y + p.h >= groundY()) { p.y = groundY() - p.h; p.vy = 0; }
-  if (p.x < 25) p.x = 25;
-  if (p.x > canvas.width - 25) p.x = canvas.width - 25;
-
-  if (p.actT > 0) p.actT--;
-  else p.act = "idle";
-
-  // Boss AI
-  const dist = p.x - boss.x;
-  boss.face = dist > 0 ? 1 : -1;
-  if (Math.abs(dist) > 65) {
-    boss.x += boss.face * 2.2;
-  } else {
-    if (Math.random() < 0.04) {
-      boss.act = "smash";
-      boss.actT = 15;
-      p.hp -= 12;
-      p.vx = -boss.face * 7;
-      shakeTime = 6;
-      addSparks(p.x, p.y + 30, "#00f2fe", 12);
-    }
-  }
-  if (boss.y + boss.h < groundY()) boss.y += 4;
-  else boss.y = groundY() - boss.h;
-
-  if (comboReset > 0) comboReset--;
-  else { combo = 0; document.getElementById("combo-counter").innerText = ""; }
-
-  // Particles
-  for (let i = particles.length - 1; i >= 0; i--) {
-    let pt = particles[i];
-    pt.x += pt.vx; pt.y += pt.vy; pt.life--;
-    if (pt.life <= 0) particles.splice(i, 1);
-  }
-
-  // Reset Boss when defeated
-  if (boss.hp <= 0) {
-    boss.hp = 120;
-    boss.x = canvas.width - 50;
-    p.hp = Math.min(100, p.hp + 40);
-  }
-
-  // Update UI HP
-  document.getElementById("p-hp").style.width = Math.max(0, (p.hp / p.maxHp) * 100) + "%";
-  document.getElementById("e-hp").style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
-
-  // Render
-  ctx.save();
-  if (shakeTime > 0) {
-    ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
-    shakeTime--;
-  }
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawCityBg();
-  drawWarrior(p, "#00f2fe", false);
-  drawWarrior(boss, "#ff0844", true);
-
-  // Sparks
-  particles.forEach(pt => {
-    ctx.fillStyle = pt.color;
-    ctx.shadowColor = pt.color;
-    ctx.shadowBlur = 8;
-    ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
-  });
-
-  ctx.restore();
+  update();
+  render();
   requestAnimationFrame(loop);
 }
 
