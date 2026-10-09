@@ -17,7 +17,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Server start hote hi table ready karega
+# Bot chalu hote hi table ensure karega
 init_db()
 
 def get_or_create_user(user_id, name="Player"):
@@ -40,4 +40,3 @@ def update_score(user_id, delta):
     c.execute("UPDATE users SET score = MAX(0, score + ?) WHERE user_id = ?", (delta, user_id))
     conn.commit()
     conn.close()
-    
