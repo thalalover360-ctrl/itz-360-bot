@@ -1,5 +1,6 @@
 import os
 import threading
+import logging
 from flask import Flask, render_template
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -13,6 +14,8 @@ from tictactoe import ttt_cmd, ttt_callback
 from battle import fight_cmd
 from chess_pvp import chess_cmd
 from maut_pvp import maut_fight_cmd, maut_pvp_callback
+
+logging.basicConfig(level=logging.INFO)
 
 web_app = Flask(__name__)
 
@@ -28,14 +31,10 @@ def chess_view():
 def maut360_view():
     return render_template('maut360.html')
 
-def run_flask():
-    port = int(os.environ.get("PORT", 8080))
-    web_app.run(host="0.0.0.0", port=port, use_reloader=False)
-
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     db.get_or_create_user(user.id, user.first_name)
-    msg = "🎮 Welcome to itz360 Arcade!\n\n/maut - Mini App\n/mautfight <coins> - Duel\n/toss\n/dice\n/chess"
+    msg = "🎮 Welcome to itz360 Arcade!\n\n/maut - Play MAUT 360\n/chess - Chess 1v1\n/guess - Number Game\n/toss - Toss Coin\n/score - My Coins"
     await update.message.reply_text(msg)
 
 async def score_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -56,24 +55,21 @@ async def maut_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     db.get_or_create_user(user.id, user.first_name)
     url = "https://itz-360-bot.onrender.com/maut360"
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("Play MAUT 360", web_app=WebAppInfo(url=url))]])
-    await update.message.reply_text("🥊 Open Arena:", reply_markup=kb)
+    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🥊 Play MAUT 360", web_app=WebAppInfo(url=url))]])
+    await update.message.reply_text("⚔️ MAUT 360 Arena:", reply_markup=kb)
 
-def main():
+def start_telegram_bot():
     token = os.environ.get("BOT_TOKEN")
     if not token:
-        print("❌ CRITICAL ERROR: BOT_TOKEN Environment Variable is MISSING!")
+        print("❌ ERROR: BOT_TOKEN Environment Variable is NOT SET in Render!", flush=True)
         return
-
-    print("🚀 Starting Flask in background thread...")
-    t = threading.Thread(target=run_flask, daemon=True)
-    t.start()
-
-    print("🤖 Starting Telegram ApplicationBuilder...")
+    
+    print(f"🤖 Connecting Telegram Bot with token ending in ...{token[-5:]}", flush=True)
     app = ApplicationBuilder().token(token).build()
 
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CommandHandler("score", score_cmd))
+    app.add_handler(CommandHandler("scorecard", score_cmd))
     app.add_handler(CommandHandler("daily", daily_cmd))
     app.add_handler(CommandHandler("toss", toss_cmd))
     app.add_handler(CommandHandler("dice", dice_cmd))
@@ -88,9 +84,13 @@ def main():
     app.add_handler(CommandHandler("guess", guess_cmd))
     app.add_handler(CommandHandler("scramble", scramble_cmd))
 
-    print("✅ BOT IS LIVE AND POLLING TELEGRAM UPDATES!")
+    print("✅ TELEGRAM POLLING STARTED SUCCESSFULLY!", flush=True)
     app.run_polling(drop_pending_updates=True)
 
+# Gunicorn ho ya direct Python, ye line hamesha execute hogi:
+threading.Thread(target=start_telegram_bot, daemon=True).start()
+
 if __name__ == "__main__":
-    main()
-  
+    port = int(os.environ.get("PORT", 8080))
+    web_app.run(host="0.0.0.0", port=port, use_reloader=False)
+    
