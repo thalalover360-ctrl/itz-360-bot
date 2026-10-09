@@ -37,7 +37,11 @@ def run_flask():
 
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    db.get_or_create_user(user.id, user.first_name)
+    if user:
+        try:
+            db.get_or_create_user(user.id, user.first_name)
+        except Exception as e:
+            print(f"DB Error: {e}", flush=True)
     msg = "🎮 Welcome to itz360 Arcade!\n\n/maut - Play MAUT 360\n/chess - Chess 1v1\n/guess - Number Game\n/toss - Toss Coin\n/score - My Coins"
     await update.message.reply_text(msg)
 
@@ -55,9 +59,11 @@ async def daily_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def maut_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    if not user:
-        return
-    db.get_or_create_user(user.id, user.first_name)
+    if user:
+        try:
+            db.get_or_create_user(user.id, user.first_name)
+        except Exception:
+            pass
     url = "https://itz-360-bot.onrender.com/maut360"
     kb = InlineKeyboardMarkup([[InlineKeyboardButton("🥊 Play MAUT 360", web_app=WebAppInfo(url=url))]])
     await update.message.reply_text("⚔️ MAUT 360 Arena:", reply_markup=kb)
@@ -68,11 +74,11 @@ if __name__ == "__main__":
         print("❌ CRITICAL: BOT_TOKEN is missing!", flush=True)
         exit(1)
 
-    print("🌐 Starting Flask web server on background thread...", flush=True)
+    # Flask ko background me daalo
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
 
-    print("🤖 Starting Telegram Bot polling on MAIN thread...", flush=True)
+    # Telegram ko MAIN thread me chalao taaki crash na ho
     app = ApplicationBuilder().token(token).build()
 
     app.add_handler(CommandHandler("start", start_cmd))
@@ -92,6 +98,6 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("guess", guess_cmd))
     app.add_handler(CommandHandler("scramble", scramble_cmd))
 
-    print("✅ BOT IS LIVE!", flush=True)
+    print("✅ BOT IS LIVE ON TELEGRAM!", flush=True)
     app.run_polling(drop_pending_updates=True)
     
