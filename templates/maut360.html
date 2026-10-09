@@ -3,351 +3,222 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MAUT 360 - Arena Combat</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>MAUT 360 Combat Arena</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-  body { background: #0b0e14; color: #fff; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; touch-action: none; }
-
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { background: #0b0e14; color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; }
   #hud {
     position: absolute; top: 0; left: 0; width: 100vw; height: 75px;
     background: #11151f; border-bottom: 2px solid #202738;
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 16px; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; z-index: 10;
   }
-  .fighter-info { width: 38%; }
-  .name { font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 5px; }
-  .hp-bar-bg { width: 100%; height: 16px; background: #222736; border-radius: 8px; overflow: hidden; border: 1.5px solid #333d54; }
-  .hp-bar-fill { height: 100%; width: 100%; transition: width 0.15s ease-out; }
-  #p-hp { background: linear-gradient(90deg, #00c6ff, #0072ff); }
-  #e-hp { background: linear-gradient(90deg, #ff416c, #ff4b2b); }
-
-  #center-badge { text-align: center; }
-  #lvl-badge { font-size: 14px; font-weight: 900; color: #f1c40f; }
-  #status-text { font-size: 11px; color: #8892b0; margin-top: 2px; }
-
-  #gameCanvas {
-    display: block; width: 100vw; height: calc(100vh - 225px);
-    margin-top: 75px; background: #161b26;
-  }
-
+  .info { width: 38%; }
+  .name { font-size: 13px; font-weight: 800; margin-bottom: 5px; }
+  .bar-bg { width: 100%; height: 16px; background: #222736; border-radius: 8px; overflow: hidden; border: 1.5px solid #333d54; }
+  .fill { height: 100%; width: 100%; transition: width 0.15s ease-out; }
+  #p-bar { background: linear-gradient(90deg, #00c6ff, #0072ff); }
+  #e-bar { background: linear-gradient(90deg, #ff416c, #ff4b2b); }
+  #mode-badge { font-size: 14px; font-weight: 900; color: #f1c40f; text-align: center; }
+  #gameCanvas { display: block; width: 100vw; height: calc(100vh - 225px); margin-top: 75px; background: #161b26; }
   #controls {
     position: absolute; bottom: 0; left: 0; width: 100vw; height: 150px;
     background: #0d1118; border-top: 2px solid #202738;
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 20px; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; z-index: 10;
   }
-  .pad-group { display: flex; gap: 10px; }
+  .btns { display: flex; gap: 10px; }
   .btn {
-    width: 60px; height: 60px; border-radius: 14px; font-size: 20px; font-weight: 900;
+    width: 62px; height: 62px; border-radius: 14px; font-size: 22px; font-weight: 900;
     background: #1c2230; color: #fff; border: 2px solid #2f384d;
     display: flex; align-items: center; justify-content: center;
   }
   .btn:active { transform: scale(0.92); background: #2f384d; }
   .btn-atk { border-color: #ff4757; color: #ff6b81; }
-  .btn-atk:active { background: #ff4757; color: #fff; }
-  .btn-def { border-color: #2ed573; color: #2ed573; }
-  .btn-def:active { background: #2ed573; color: #000; }
-
   #overlay {
-    position: absolute; inset: 0; background: rgba(5, 7, 12, 0.88);
-    display: none; flex-direction: column; justify-content: center; align-items: center;
-    z-index: 20;
-  }
-  #overlay h1 { font-size: 34px; font-weight: 900; margin-bottom: 12px; }
-  #overlay p { font-size: 15px; color: #a4b0be; margin-bottom: 24px; }
-  #overlay button {
-    padding: 14px 28px; font-size: 16px; font-weight: 800; border-radius: 12px;
-    border: none; background: #0072ff; color: #fff; cursor: pointer;
+    position: absolute; inset: 0; background: rgba(5, 7, 12, 0.9);
+    display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 20;
   }
 </style>
 </head>
 <body>
-
   <div id="hud">
-    <div class="fighter-info">
-      <div class="name" style="color: #00c6ff;">PLAYER</div>
-      <div class="hp-bar-bg"><div id="p-hp" class="hp-bar-fill"></div></div>
+    <div class="info">
+      <div class="name" id="p1-name" style="color: #00c6ff;">PLAYER 1</div>
+      <div class="bar-bg"><div id="p-bar" class="fill"></div></div>
     </div>
-    <div id="center-badge">
-      <div id="lvl-badge">LEVEL 1</div>
-      <div id="status-text">FIGHT!</div>
-    </div>
-    <div class="fighter-info" style="text-align: right;">
-      <div class="name" style="color: #ff4757;">BOSS</div>
-      <div class="hp-bar-bg"><div id="e-hp" class="hp-bar-fill"></div></div>
+    <div id="mode-badge">ARENA</div>
+    <div class="info" style="text-align: right;">
+      <div class="name" id="p2-name" style="color: #ff4757;">PLAYER 2</div>
+      <div class="bar-bg"><div id="e-bar" class="fill"></div></div>
     </div>
   </div>
 
   <canvas id="gameCanvas"></canvas>
 
   <div id="controls">
-    <div class="pad-group">
+    <div class="btns">
       <button class="btn" id="b-left">◀</button>
       <button class="btn" id="b-right">▶</button>
       <button class="btn" id="b-jump">⬆</button>
     </div>
-    <div class="pad-group">
-      <button class="btn btn-def" id="b-shield">🛡️</button>
+    <div class="btns">
       <button class="btn btn-atk" id="b-punch">👊</button>
       <button class="btn btn-atk" id="b-kick">🦵</button>
     </div>
   </div>
 
   <div id="overlay">
-    <h1 id="res-title">VICTORY</h1>
-    <p id="res-sub">Boss defeated cleanly!</p>
-    <button id="res-btn" onclick="nextRound()">NEXT LEVEL</button>
+    <h1 id="res-title" style="font-size:32px; font-weight:900;">MATCH OVER</h1>
+    <p id="res-sub" style="color:#aaa; margin: 15px 0 25px;"></p>
+    <button onclick="location.reload()" style="padding:12px 24px; font-weight:bold; border-radius:10px; background:#0072ff; color:#fff; border:none;">REMATCH</button>
   </div>
 
 <script>
+const params = new URLSearchParams(window.location.search);
+const room = params.get('room');
+const myRole = params.get('role') || 'p1';
+const isPvP = !!room;
+
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight - 225;
-}
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight - 225; }
 window.addEventListener("resize", resize);
 resize();
 
-let level = 1;
-let gameOver = false;
 const floorY = () => canvas.height - 35;
+let gameOver = false;
+let p1 = { x: 70, y: 100, vx: 0, vy: 0, hp: 100, act: "idle", face: 1 };
+let p2 = { x: canvas.width - 90, y: 100, vx: 0, vy: 0, hp: 100, act: "idle", face: -1 };
 
-const player = {
-  x: 60, y: 100, vx: 0, vy: 0, w: 32, h: 65,
-  hp: 100, maxHp: 100, state: "idle", timer: 0, face: 1, isDef: false
-};
+if (isPvP) {
+  document.getElementById("mode-badge").innerText = `ROOM: ${room}`;
+  document.getElementById("p1-name").innerText = myRole === 'p1' ? "YOU (P1)" : "OPPONENT (P1)";
+  document.getElementById("p2-name").innerText = myRole === 'p2' ? "YOU (P2)" : "OPPONENT (P2)";
+}
 
-const boss = {
-  x: canvas.width - 100, y: 100, vx: 0, vy: 0, w: 34, h: 68,
-  hp: 100, maxHp: 100, state: "idle", timer: 0, face: -1, isDef: false
-};
-
-const hits = [];
-const keys = { left: false, right: false };
-
-function bind(id, onStart, onEnd) {
+function bind(id, fn) {
   const el = document.getElementById(id);
-  el.addEventListener("touchstart", (e) => { e.preventDefault(); onStart(); });
-  el.addEventListener("touchend", (e) => { e.preventDefault(); if (onEnd) onEnd(); });
-  el.addEventListener("mousedown", (e) => { e.preventDefault(); onStart(); });
-  el.addEventListener("mouseup", (e) => { e.preventDefault(); if (onEnd) onEnd(); });
+  el.addEventListener("touchstart", (e) => { e.preventDefault(); fn(); });
+  el.addEventListener("mousedown", (e) => { e.preventDefault(); fn(); });
 }
 
-bind("b-left", () => keys.left = true, () => keys.left = false);
-bind("b-right", () => keys.right = true, () => keys.right = false);
-bind("b-jump", () => {
-  if (player.y >= floorY() - player.h - 2) player.vy = -13;
-});
-bind("b-shield", () => player.isDef = true, () => player.isDef = false);
-bind("b-punch", () => doStrike("punch", 16, 12));
-bind("b-kick", () => doStrike("kick", 24, 16));
+bind("b-left", () => act("move_left"));
+bind("b-right", () => act("move_right"));
+bind("b-jump", () => act("jump"));
+bind("b-punch", () => act("punch"));
+bind("b-kick", () => act("kick"));
 
-function doStrike(type, dmg, duration) {
-  if (player.timer > 0 || gameOver) return;
-  player.state = type;
-  player.timer = duration;
-
-  const dist = Math.abs(player.x - boss.x);
-  const vDist = Math.abs(player.y - boss.y);
-  if (dist < 65 && vDist < 50) {
-    const actualDmg = boss.isDef ? Math.floor(dmg * 0.3) : dmg;
-    boss.hp -= actualDmg;
-    boss.vx = player.face * 7;
-    addHit(boss.x, boss.y + 25, `-${actualDmg}`);
-  }
-}
-
-function addHit(x, y, text) {
-  hits.push({ x, y, text, life: 25 });
-}
-
-function drawFighter(char, color, isBoss) {
-  ctx.save();
-  ctx.translate(char.x, char.y);
-
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(0, 10, 11, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(char.face === 1 ? 2 : -7, 7, 6, 3);
-
-  ctx.fillStyle = isBoss ? "#8a1928" : "#124b7a";
-  ctx.fillRect(-10, 22, 20, 26);
-
-  ctx.fillStyle = color;
-  ctx.fillRect(-10, 36, 20, 4);
-
-  if (char.isDef) {
-    ctx.strokeStyle = "#2ed573";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(char.face * 8, 30, 26, -0.4 * Math.PI, 0.4 * Math.PI, char.face === -1);
-    ctx.stroke();
+function act(action) {
+  if (gameOver) return;
+  const me = myRole === 'p1' ? p1 : p2;
+  if (action === "move_left") me.x = Math.max(30, me.x - 20);
+  if (action === "move_right") me.x = Math.min(canvas.width - 50, me.x + 20);
+  if (action === "jump" && me.y >= floorY() - 70) me.vy = -14;
+  if (action === "punch" || action === "kick") {
+    me.act = action;
+    setTimeout(() => me.act = "idle", 300);
   }
 
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 5;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  if (char.state === "punch") {
-    ctx.moveTo(0, 26);
-    ctx.lineTo(char.face * 28, 26);
+  if (isPvP) {
+    fetch('/api/room/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room, role: myRole, action })
+    });
   } else {
-    ctx.moveTo(0, 26);
-    ctx.lineTo(char.face * 10, 34);
+    // Solo vs Bot
+    if (action === "punch" || action === "kick") {
+      p2.hp = Math.max(0, p2.hp - (action === "punch" ? 15 : 22));
+    }
+  }
+}
+
+// Multiplayer sync polling
+if (isPvP) {
+  setInterval(async () => {
+    if (gameOver) return;
+    try {
+      const res = await fetch(`/api/room/state?room=${room}`);
+      const data = await res.json();
+      if (data && data.p1_hp !== undefined) {
+        p1.hp = data.p1_hp;
+        p2.hp = data.p2_hp;
+        if (myRole === 'p1') p2.act = data.p2_last_act;
+        if (myRole === 'p2') p1.act = data.p1_last_act;
+      }
+    } catch(e){}
+  }, 300);
+}
+
+function drawWarrior(obj, color, isP2) {
+  ctx.save();
+  ctx.translate(obj.x, obj.y);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(0, 10, 11, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = isP2 ? "#8a1928" : "#124b7a";
+  ctx.fillRect(-10, 22, 20, 26);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 5; ctx.lineCap = "round";
+  ctx.beginPath();
+  if (obj.act === "punch") {
+    ctx.moveTo(0, 26); ctx.lineTo((isP2 ? -1 : 1) * 26, 26);
+  } else {
+    ctx.moveTo(0, 26); ctx.lineTo((isP2 ? -1 : 1) * 10, 34);
   }
   ctx.stroke();
-
   ctx.beginPath();
-  if (char.state === "kick") {
-    ctx.moveTo(0, 48);
-    ctx.lineTo(char.face * 30, 42);
-    ctx.moveTo(0, 48);
-    ctx.lineTo(-4, 65);
+  if (obj.act === "kick") {
+    ctx.moveTo(0, 48); ctx.lineTo((isP2 ? -1 : 1) * 28, 42);
+    ctx.moveTo(0, 48); ctx.lineTo(-4, 65);
   } else {
     ctx.moveTo(-5, 48); ctx.lineTo(-6, 65);
-    ctx.moveTo(5, 48);  ctx.lineTo(6, 65);
+    ctx.moveTo(5, 48); ctx.lineTo(6, 65);
   }
   ctx.stroke();
-
   ctx.restore();
 }
 
-function update() {
-  if (gameOver) return;
+function loop() {
+  p1.vy += 0.7; p1.y += p1.vy;
+  if (p1.y + 65 >= floorY()) { p1.y = floorY() - 65; p1.vy = 0; }
 
-  if (keys.left) { player.vx = -4.5; player.face = -1; }
-  else if (keys.right) { player.vx = 4.5; player.face = 1; }
-  else player.vx *= 0.7;
+  p2.vy += 0.7; p2.y += p2.vy;
+  if (p2.y + 65 >= floorY()) { p2.y = floorY() - 65; p2.vy = 0; }
 
-  player.vy += 0.65;
-  player.x += player.vx;
-  player.y += player.vy;
-
-  if (player.y + player.h >= floorY()) { player.y = floorY() - player.h; player.vy = 0; }
-  if (player.x < 25) player.x = 25;
-  if (player.x > canvas.width - 25) player.x = canvas.width - 25;
-
-  if (player.timer > 0) player.timer--;
-  else player.state = "idle";
-
-  const dist = player.x - boss.x;
-  boss.face = dist > 0 ? 1 : -1;
-  const speed = 1.6 + (level * 0.25);
-
-  if (Math.abs(dist) > 55) {
-    boss.x += boss.face * speed;
-  } else {
-    if (Math.random() < 0.03 + (level * 0.01) && boss.timer === 0) {
-      const atkType = Math.random() > 0.4 ? "punch" : "kick";
-      boss.state = atkType;
-      boss.timer = 15;
-      const bDmg = atkType === "punch" ? (10 + level * 2) : (16 + level * 2);
-      const actual = player.isDef ? Math.floor(bDmg * 0.2) : bDmg;
-      player.hp -= actual;
-      player.vx = -boss.face * 6;
-      addHit(player.x, player.y + 25, `-${actual}`);
+  // Bot AI if solo
+  if (!isPvP && !gameOver) {
+    if (Math.abs(p1.x - p2.x) > 60) p2.x += (p1.x > p2.x ? 1.5 : -1.5);
+    else if (Math.random() < 0.03) {
+      p2.act = "punch";
+      p1.hp = Math.max(0, p1.hp - 10);
+      setTimeout(() => p2.act = "idle", 300);
     }
   }
 
-  boss.vy += 0.65;
-  boss.y += boss.vy;
-  boss.x += boss.vx;
-  boss.vx *= 0.8;
-  if (boss.y + boss.h >= floorY()) { boss.y = floorY() - boss.h; boss.vy = 0; }
+  document.getElementById("p-bar").style.width = p1.hp + "%";
+  document.getElementById("e-bar").style.width = p2.hp + "%";
 
-  if (boss.timer > 0) boss.timer--;
-  else boss.state = "idle";
-
-  for (let i = hits.length - 1; i >= 0; i--) {
-    hits[i].y -= 1.2;
-    hits[i].life--;
-    if (hits[i].life <= 0) hits.splice(i, 1);
+  if (!gameOver && (p1.hp <= 0 || p2.hp <= 0)) {
+    gameOver = true;
+    const over = document.getElementById("overlay");
+    const title = document.getElementById("res-title");
+    over.style.display = "flex";
+    if (p1.hp <= 0) {
+      title.innerText = "PLAYER 2 WINS! 🏆";
+      title.style.color = "#ff416c";
+    } else {
+      title.innerText = "PLAYER 1 WINS! 🏆";
+      title.style.color = "#00c6ff";
+    }
   }
 
-  document.getElementById("p-hp").style.width = Math.max(0, (player.hp / player.maxHp) * 100) + "%";
-  document.getElementById("e-hp").style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
-
-  if (boss.hp <= 0) {
-    showOverlay(true);
-  } else if (player.hp <= 0) {
-    showOverlay(false);
-  }
-}
-
-function showOverlay(isWin) {
-  gameOver = true;
-  const overlay = document.getElementById("overlay");
-  const title = document.getElementById("res-title");
-  const sub = document.getElementById("res-sub");
-  const btn = document.getElementById("res-btn");
-
-  overlay.style.display = "flex";
-  if (isWin) {
-    title.innerText = "VICTORY! 🏆";
-    title.style.color = "#00c6ff";
-    sub.innerText = `You defeated Boss Level ${level}!`;
-    btn.innerText = "NEXT LEVEL";
-  } else {
-    title.innerText = "DEFEAT! 💀";
-    title.style.color = "#ff4757";
-    sub.innerText = "Aap haar gaye! Dubara shuru karein.";
-    btn.innerText = "RESTART";
-  }
-}
-
-function nextRound() {
-  const overlay = document.getElementById("overlay");
-  overlay.style.display = "none";
-  gameOver = false;
-
-  if (player.hp <= 0) {
-    level = 1;
-  } else {
-    level++;
-  }
-
-  document.getElementById("lvl-badge").innerText = `LEVEL ${level}`;
-  player.hp = 100;
-  player.x = 60;
-
-  boss.maxHp = 100 + (level - 1) * 25;
-  boss.hp = boss.maxHp;
-  boss.x = canvas.width - 80;
-}
-
-function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
   ctx.fillStyle = "#1e2433";
   ctx.fillRect(0, floorY(), canvas.width, canvas.height - floorY());
-  ctx.strokeStyle = "#38435d";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, floorY()); ctx.lineTo(canvas.width, floorY());
-  ctx.stroke();
-
-  drawFighter(player, "#00c6ff", false);
-  drawFighter(boss, "#ff4757", true);
-
-  hits.forEach(h => {
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 15px sans-serif";
-    ctx.fillText(h.text, h.x - 10, h.y);
-  });
-}
-
-function loop() {
-  update();
-  render();
+  drawWarrior(p1, "#00c6ff", false);
+  drawWarrior(p2, "#ff416c", true);
   requestAnimationFrame(loop);
 }
-
 loop();
 </script>
 </body>
