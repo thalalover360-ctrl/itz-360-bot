@@ -1,225 +1,255 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Maut360</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; user-select: none; }
-    body {
-      background: #0a0a14;
-      color: #fff;
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      height: 100vh;
-      overflow: hidden;
-      padding: 10px 0;
-    }
-    #top-hud { width: 92%; max-width: 400px; display: flex; flex-direction: column; gap: 5px; }
-    .hud-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }
-    .bars { display: flex; gap: 10px; width: 100%; }
-    .bar-wrap { flex: 1; height: 12px; background: #222; border-radius: 6px; overflow: hidden; border: 1px solid #444; }
-    .hp-p { height: 100%; width: 100%; background: #00ff88; transition: width 0.1s; }
-    .hp-e { height: 100%; width: 100%; background: #ff3366; transition: width 0.1s; }
-    .aura-wrap { width: 100%; height: 6px; background: #151828; border-radius: 4px; overflow: hidden; }
-    .aura-fill { height: 100%; width: 0%; background: #00d9ff; transition: width 0.1s; }
-    canvas {
-      background: linear-gradient(180deg, #151828 0%, #251d38 100%);
-      border: 2px solid #3d2f66;
-      border-radius: 12px;
-    }
-    #controls { width: 92%; max-width: 400px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 6px; }
-    .btn {
-      padding: 14px 4px; font-size: 12px; font-weight: bold; border-radius: 8px; border: none; color: #fff; cursor: pointer;
-    }
-    .btn-punch { background: #e040fb; }
-    .btn-kick { background: #ff5252; }
-    .btn-aura { background: #00e5ff; color: #000; }
-    .btn-ulti { background: #ffd600; color: #000; }
-    #modal {
-      display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85); flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 10;
-    }
-    #modal button { padding: 10px 24px; background: #00ff88; border: none; font-size: 15px; font-weight: bold; border-radius: 6px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MAUT 360 Action Fighter</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+  body { background: #0b0c10; color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; }
+  #header { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; background: #1f2833; font-weight: bold; font-size: 13px; }
+  .bar-box { width: 38%; background: #333; height: 14px; border-radius: 7px; overflow: hidden; border: 1px solid #555; }
+  .bar-fill { height: 100%; width: 100%; transition: width 0.1s; }
+  #p-bar { background: linear-gradient(90deg, #45f3ff, #00ff88); }
+  #e-bar { background: linear-gradient(90deg, #ff0844, #ffb199); }
+  #gameCanvas { display: block; width: 100vw; height: calc(100vh - 190px); background: radial-gradient(circle, #1a1c29 0%, #08090d 100%); }
+  #controls { display: flex; justify-content: space-between; height: 140px; padding: 10px 14px; background: #12131a; }
+  .d-pad, .actions { display: grid; grid-gap: 8px; align-content: center; }
+  .d-pad { grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 48px); }
+  .actions { grid-template-columns: repeat(2, 54px); grid-template-rows: repeat(2, 48px); }
+  .btn { background: #1f2833; border: 2px solid #45f3ff; color: #fff; font-weight: bold; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 4px #0b0c10; }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px #0b0c10; background: #45f3ff; color: #000; }
+  .btn-atk { border-color: #ff0844; }
+  .btn-atk:active { background: #ff0844; }
+  .btn-fly { border-color: #f1c40f; }
+  .btn-fly:active { background: #f1c40f; }
+</style>
 </head>
 <body>
-  <div id="top-hud">
-    <div class="hud-row">
-      <span style="color:#00ff88;">YOU</span>
-      <span id="lvl-txt" style="color:#ffd600;">STAGE 1 / 50</span>
-      <span style="color:#ff3366;" id="foe-txt">BOSS</span>
+  <div id="header">
+    <div style="width: 40%;">
+      <div>PLAYER 🥊</div>
+      <div class="bar-box"><div id="p-bar" class="bar-fill"></div></div>
     </div>
-    <div class="bars">
-      <div class="bar-wrap"><div id="p-hp" class="hp-p"></div></div>
-      <div class="bar-wrap"><div id="e-hp" class="hp-e"></div></div>
+    <div id="stage-text" style="color: #f1c40f;">STAGE 1</div>
+    <div style="width: 40%; text-align: right;">
+      <div>BOSS 💀</div>
+      <div class="bar-box" style="margin-left:auto;"><div id="e-bar" class="bar-fill"></div></div>
     </div>
-    <div class="aura-wrap"><div id="p-aura" class="aura-fill"></div></div>
   </div>
 
-  <canvas id="c" width="340" height="300"></canvas>
+  <canvas id="gameCanvas"></canvas>
 
   <div id="controls">
-    <button class="btn btn-punch" onclick="action('punch')">👊 PUNCH</button>
-    <button class="btn btn-kick" onclick="action('kick')">🦵 KICK</button>
-    <button class="btn btn-aura" onclick="action('aura')">🔥 AURA</button>
-    <button class="btn btn-ulti" onclick="action('ulti')">⚡ ULTI</button>
+    <div class="d-pad">
+      <div></div>
+      <button class="btn btn-fly" id="b-fly">🚀</button>
+      <div></div>
+      <button class="btn" id="b-left">◀</button>
+      <button class="btn" id="b-down">▼</button>
+      <button class="btn" id="b-right">▶</button>
+    </div>
+    <div class="actions">
+      <button class="btn btn-atk" id="b-punch">👊</button>
+      <button class="btn btn-atk" id="b-kick">🦵</button>
+      <button class="btn" style="border-color:#a29bfe;" id="b-blast">⚡</button>
+      <button class="btn btn-fly" id="b-jump">⬆</button>
+    </div>
   </div>
 
-  <div id="modal">
-    <h2 id="m-title">STAGE WON!</h2>
-    <p id="m-sub"></p>
-    <button id="m-btn" onclick="nextStage()">CONTINUE</button>
-  </div>
-    <script>
-    const tg = window.Telegram?.WebApp;
-    if (tg) tg.expand();
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-    const canvas = document.getElementById("c");
-    const ctx = canvas.getContext("2d");
+function resize() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+}
+window.addEventListener("resize", resize);
+resize();
 
-    let level = 1, maxLevels = 50, isOver = false;
-    let player = { x: 70, y: 210, hp: 100, maxHp: 100, aura: 20, maxAura: 100, anim: 'idle' };
-    let enemy = { x: 230, y: 210, hp: 100, maxHp: 100, atk: 6, anim: 'idle' };
-    let particles = [], hitText = null;
+let stage = 1;
+const floorY = () => canvas.height - 40;
 
-    function initLevel(lvl) {
-      level = lvl;
-      document.getElementById("lvl-txt").innerText = `STAGE ${level} / ${maxLevels}`;
-      document.getElementById("foe-txt").innerText = `LVL ${level} BOSS`;
-      player.hp = player.maxHp;
-      player.aura = 20;
-      enemy.maxHp = 70 + (level * 16);
-      enemy.hp = enemy.maxHp;
-      enemy.atk = 5 + Math.floor(level * 1.2);
-      updateHud();
-      isOver = false;
-      document.getElementById("modal").style.display = "none";
+const player = {
+  x: 50, y: 150, vx: 0, vy: 0, w: 28, h: 50,
+  hp: 100, maxHp: 100, isFlying: false, attack: null, timer: 0
+};
+
+const enemy = {
+  x: 240, y: 150, vx: 0, vy: 0, w: 32, h: 54,
+  hp: 100, maxHp: 100, attack: null, timer: 0
+};
+
+let projectiles = [];
+const keys = {};
+
+function bindBtn(id, pressFn, releaseFn) {
+  const el = document.getElementById(id);
+  const start = (e) => { e.preventDefault(); pressFn(); };
+  const end = (e) => { e.preventDefault(); if(releaseFn) releaseFn(); };
+  el.addEventListener("touchstart", start);
+  el.addEventListener("touchend", end);
+  el.addEventListener("mousedown", start);
+  el.addEventListener("mouseup", end);
+}
+
+bindBtn("b-left", () => keys.left = true, () => keys.left = false);
+bindBtn("b-right", () => keys.right = true, () => keys.right = false);
+bindBtn("b-down", () => keys.down = true, () => keys.down = false);
+bindBtn("b-jump", () => { if (player.y >= floorY() - player.h - 2) player.vy = -11; });
+bindBtn("b-fly", () => {
+  player.isFlying = !player.isFlying;
+  if (player.isFlying) player.vy = -4;
+});
+
+bindBtn("b-punch", () => doAttack("punch"));
+bindBtn("b-kick", () => doAttack("kick"));
+bindBtn("b-blast", () => spawnBlast());
+
+function doAttack(type) {
+  if (player.attack) return;
+  player.attack = type;
+  player.timer = 15;
+  // Hit check
+  const dist = Math.abs((player.x + player.w/2) - (enemy.x + enemy.w/2));
+  const vDist = Math.abs(player.y - enemy.y);
+  if (dist < 55 && vDist < 40) {
+    const dmg = type === "punch" ? 12 : 18;
+    enemy.hp -= dmg;
+    enemy.vx = 8;
+  }
+}
+
+function spawnBlast() {
+  projectiles.push({
+    x: player.x + player.w + 4,
+    y: player.y + 16,
+    vx: 8,
+    owner: "p"
+  });
+}
+
+function updateAI() {
+  const dx = player.x - enemy.x;
+  if (Math.abs(dx) > 40) {
+    enemy.x += dx > 0 ? 1.5 : -1.5;
+  } else {
+    if (Math.random() < 0.04) {
+      player.hp -= 8;
+      player.vx = -6;
     }
+  }
+  // Enemy floor physics
+  if (enemy.y + enemy.h < floorY()) enemy.y += 4;
+  else enemy.y = floorY() - enemy.h;
+  enemy.x += enemy.vx;
+  enemy.vx *= 0.8;
+}
 
-    function updateHud() {
-      document.getElementById("p-hp").style.width = (Math.max(0, player.hp) / player.maxHp * 100) + "%";
-      document.getElementById("e-hp").style.width = (Math.max(0, enemy.hp) / enemy.maxHp * 100) + "%";
-      document.getElementById("p-aura").style.width = (player.aura / player.maxAura * 100) + "%";
+function loop() {
+  // Player Movement
+  if (keys.left) player.vx = -4.5;
+  else if (keys.right) player.vx = 4.5;
+  else player.vx *= 0.7;
+
+  if (player.isFlying) {
+    if (keys.down) player.vy = 4;
+    else player.vy = Math.sin(Date.now() / 200) * 0.8;
+  } else {
+    player.vy += 0.6; // Gravity
+  }
+
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // Floor collision
+  if (player.y + player.h >= floorY()) {
+    player.y = floorY() - player.h;
+    player.vy = 0;
+    player.isFlying = false;
+  }
+  if (player.y < 10) player.y = 10;
+  if (player.x < 10) player.x = 10;
+  if (player.x > canvas.width - player.w - 10) player.x = canvas.width - player.w - 10;
+
+  if (player.timer > 0) player.timer--;
+  else player.attack = null;
+
+  // Projectiles
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    let p = projectiles[i];
+    p.x += p.vx;
+    if (Math.abs(p.x - enemy.x) < 25 && Math.abs(p.y - enemy.y) < 40) {
+      enemy.hp -= 22;
+      projectiles.splice(i, 1);
+      continue;
     }
+    if (p.x > canvas.width || p.x < 0) projectiles.splice(i, 1);
+  }
 
-    function action(type) {
-      if (isOver) return;
-      if (type === 'punch') {
-        player.anim = 'punch';
-        let dmg = 12 + Math.floor(Math.random() * 6);
-        enemy.hp -= dmg;
-        player.aura = Math.min(100, player.aura + 10);
-        hitText = { txt: `-${dmg}`, c: '#e040fb', y: enemy.y - 30 };
-      } else if (type === 'kick') {
-        player.anim = 'kick';
-        let dmg = 18 + Math.floor(Math.random() * 8);
-        enemy.hp -= dmg;
-        player.aura = Math.min(100, player.aura + 14);
-        hitText = { txt: `-${dmg}`, c: '#ff5252', y: enemy.y - 30 };
-      } else if (type === 'aura') {
-        player.anim = 'aura';
-        player.aura = Math.min(100, player.aura + 30);
-        hitText = { txt: '+AURA', c: '#00e5ff', y: player.y - 30 };
-      } else if (type === 'ulti') {
-        if (player.aura >= 60) {
-          player.aura -= 60;
-          player.anim = 'punch';
-          let dmg = 45 + Math.floor(Math.random() * 20);
-          enemy.hp -= dmg;
-          hitText = { txt: `💥 CRIT -${dmg}`, c: '#ffd600', y: enemy.y - 40 };
-        } else {
-          hitText = { txt: 'NEED AURA!', c: '#ff0055', y: player.y - 30 };
-        }
-      }
-      updateHud();
-      checkWin();
-      setTimeout(() => player.anim = 'idle', 200);
-    }
+  updateAI();
 
-    setInterval(() => {
-      if (isOver) return;
-      if (Math.random() < 0.6) {
-        enemy.anim = 'atk';
-        let dmg = enemy.atk + Math.floor(Math.random() * 4);
-        player.hp -= dmg;
-        hitText = { txt: `-${dmg}`, c: '#ff3366', y: player.y - 30 };
-        updateHud();
-        checkWin();
-        setTimeout(() => enemy.anim = 'idle', 250);
-      }
-    }, 1300);
+  // Next stage check
+  if (enemy.hp <= 0) {
+    stage++;
+    document.getElementById("stage-text").innerText = `STAGE ${stage}`;
+    enemy.hp = 100 + stage * 15;
+    enemy.maxHp = enemy.hp;
+    enemy.x = canvas.width - 60;
+    player.hp = Math.min(player.maxHp, player.hp + 30);
+  }
 
-    function checkWin() {
-      if (enemy.hp <= 0) {
-        isOver = true;
-        showModal(level >= maxLevels ? "🏆 CHAMPION!" : `STAGE ${level} CLEARED!`, "NEXT STAGE", () => initLevel(level + 1));
-      } else if (player.hp <= 0) {
-        isOver = true;
-        showModal("💀 MAUT HO GAYI!", "RETRY", () => initLevel(level));
-      }
-    }
+  if (player.hp <= 0) {
+    player.hp = player.maxHp;
+    stage = 1;
+    document.getElementById("stage-text").innerText = "STAGE 1";
+  }
 
-    function showModal(title, btnText, cb) {
-      document.getElementById("m-title").innerText = title;
-      const b = document.getElementById("m-btn");
-      b.innerText = btnText;
-      b.onclick = cb;
-      document.getElementById("modal").style.display = "flex";
-    }
+  // Update UI Bars
+  document.getElementById("p-bar").style.width = Math.max(0, (player.hp / player.maxHp) * 100) + "%";
+  document.getElementById("e-bar").style.width = Math.max(0, (enemy.hp / enemy.maxHp) * 100) + "%";
 
-    function loop() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#1e1e30";
-      ctx.fillRect(0, 240, canvas.width, 60);
+  // DRAW
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Player
-      ctx.save();
-      ctx.translate(player.x, player.y);
-      if (player.anim === 'aura') {
-        ctx.beginPath();
-        ctx.arc(0, -20, 32, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(0, 229, 255, 0.3)";
-        ctx.fill();
-      }
-      ctx.fillStyle = "#00e5ff";
-      ctx.fillRect(-10, -35, 20, 35);
-      ctx.beginPath();
-      ctx.arc(0, -45, 10, 0, Math.PI * 2);
-      ctx.fillStyle = "#fff";
-      ctx.fill();
-      if (player.anim === 'punch') { ctx.strokeStyle="#00e5ff"; ctx.lineWidth=4; ctx.strokeRect(10, -28, 16, 5); }
-      if (player.anim === 'kick') { ctx.strokeStyle="#00e5ff"; ctx.lineWidth=4; ctx.strokeRect(8, -10, 18, 5); }
-      ctx.restore();
+  // Ground
+  ctx.fillStyle = "#1f2833";
+  ctx.fillRect(0, floorY(), canvas.width, canvas.height - floorY());
+  ctx.strokeStyle = "#45f3ff";
+  ctx.strokeRect(0, floorY(), canvas.width, 1);
 
-      // Enemy
-      ctx.save();
-      ctx.translate(enemy.x, enemy.y);
-      ctx.fillStyle = "#ff3366";
-      ctx.fillRect(-12, -40, 24, 40);
-      ctx.beginPath();
-      ctx.arc(0, -50, 11, 0, Math.PI * 2);
-      ctx.fillStyle = "#ff809b";
-      ctx.fill();
-      if (enemy.anim === 'atk') { ctx.strokeStyle="#ff3366"; ctx.lineWidth=4; ctx.strokeRect(-22, -30, 14, 5); }
-      ctx.restore();
+  // Draw Player
+  ctx.fillStyle = player.isFlying ? "#f1c40f" : "#00f2fe";
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+  // Player eyes/head
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(player.x + (player.w - 8), player.y + 6, 6, 6);
+  if (player.attack) {
+    ctx.fillStyle = "#ff0844";
+    ctx.fillRect(player.x + player.w, player.y + 14, 14, 8);
+  }
 
-      // Hit Text
-      if (hitText) {
-        ctx.font = "bold 16px sans-serif";
-        ctx.fillStyle = hitText.c;
-        ctx.fillText(hitText.txt, 140, hitText.y);
-        hitText.y -= 0.8;
-      }
-      requestAnimationFrame(loop);
-    }
+  // Draw Enemy
+  ctx.fillStyle = "#ff416c";
+  ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(enemy.x + 2, enemy.y + 6, 6, 6);
 
-    initLevel(1);
-    loop();
-  </script>
+  // Draw Blasts
+  ctx.fillStyle = "#a29bfe";
+  projectiles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
 </body>
 </html>
+
