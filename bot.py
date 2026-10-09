@@ -49,8 +49,8 @@ def get_room_state():
 def post_room_action():
     data = request.json or {}
     room_id = data.get('room')
-    role = data.get('role') # 'p1' or 'p2'
-    action = data.get('action') # 'punch', 'kick', 'jump', 'move_left', 'move_right', 'idle'
+    role = data.get('role')  # 'p1' or 'p2'
+    action = data.get('action')
 
     if not room_id or room_id not in ROOMS:
         return jsonify({"status": "error"}), 400
@@ -117,7 +117,7 @@ async def maut_room_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     room_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
     ROOMS[room_code] = {
         "p1_name": user.first_name,
-        "p2_name": "Waiting...",
+        "p2_name": "Opponent",
         "p1_hp": 100,
         "p2_hp": 100,
         "p1_last_act": "idle",
@@ -133,7 +133,7 @@ async def maut_room_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     kb = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"🥊 Join as {user.first_name} (P1)", url=p1_url)],
-        [InlineKeyboardButton("⚔️ Join Fight (P2 / Kaju)", url=p2_url)],
+        [InlineKeyboardButton("⚔️ Join Fight as Opponent (P2)", url=p2_url)],
         [InlineKeyboardButton("🤖 Play Solo vs Computer", url=solo_url)]
     ])
 
@@ -141,8 +141,8 @@ async def maut_room_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💀 *MAUT 360 REAL DUEL ARENA* 💀\n\n"
         f"Host: *{user.first_name}*\n"
         f"Room Code: `{room_code}`\n\n"
-        f"👉 *{user.first_name}* P1 dabaye aur friend/Kaju P2 dabaye!\n"
-        f"Dono ke screens par real time fight start hogi!"
+        f"👉 *{user.first_name}* P1 dabaye aur koi bhi opponent P2 dabaye!\n"
+        f"Dono screens par live 1v1 match start hoga!"
     )
     await update.message.reply_text(msg, reply_markup=kb, parse_mode="Markdown")
 
@@ -171,13 +171,13 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("score", score_cmd))
     app.add_handler(CommandHandler("daily", daily_cmd))
 
-    # Real Visual MAUT Arena Command
+    # Real Visual MAUT Arena Commands
     app.add_handler(CommandHandler("maut", make_safe(maut_room_cmd)))
     app.add_handler(CommandHandler("maut360", make_safe(maut_room_cmd)))
     app.add_handler(CommandHandler("mautfight", make_safe(maut_room_cmd)))
     app.add_handler(CallbackQueryHandler(maut_pvp_callback, pattern=r"^mpvp_"))
 
-    # Baaki arcade games
+    # Other arcade games
     app.add_handler(CommandHandler("toss", make_safe(toss_cmd)))
     app.add_handler(CommandHandler("dice", make_safe(dice_cmd)))
     app.add_handler(CommandHandler("chess", make_safe(chess_cmd)))
@@ -189,3 +189,4 @@ if __name__ == "__main__":
 
     print("✅ BOT IS LIVE ON TELEGRAM!", flush=True)
     app.run_polling(drop_pending_updates=True)
+    
