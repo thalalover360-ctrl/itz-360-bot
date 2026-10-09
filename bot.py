@@ -31,6 +31,10 @@ def chess_view():
 def maut360_view():
     return render_template('maut360.html')
 
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))
+    web_app.run(host="0.0.0.0", port=port, use_reloader=False)
+
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     db.get_or_create_user(user.id, user.first_name)
@@ -58,13 +62,17 @@ async def maut_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kb = InlineKeyboardMarkup([[InlineKeyboardButton("🥊 Play MAUT 360", web_app=WebAppInfo(url=url))]])
     await update.message.reply_text("⚔️ MAUT 360 Arena:", reply_markup=kb)
 
-def start_telegram_bot():
+if __name__ == "__main__":
     token = os.environ.get("BOT_TOKEN")
     if not token:
-        print("❌ ERROR: BOT_TOKEN Environment Variable is NOT SET in Render!", flush=True)
-        return
-    
-    print(f"🤖 Connecting Telegram Bot with token ending in ...{token[-5:]}", flush=True)
+        print("❌ CRITICAL: BOT_TOKEN is missing!", flush=True)
+        exit(1)
+
+    print("🌐 Starting Flask web server on background thread...", flush=True)
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+
+    print("🤖 Starting Telegram Bot polling on MAIN thread...", flush=True)
     app = ApplicationBuilder().token(token).build()
 
     app.add_handler(CommandHandler("start", start_cmd))
@@ -84,13 +92,6 @@ def start_telegram_bot():
     app.add_handler(CommandHandler("guess", guess_cmd))
     app.add_handler(CommandHandler("scramble", scramble_cmd))
 
-    print("✅ TELEGRAM POLLING STARTED SUCCESSFULLY!", flush=True)
+    print("✅ BOT IS LIVE!", flush=True)
     app.run_polling(drop_pending_updates=True)
-
-# Gunicorn ho ya direct Python, ye line hamesha execute hogi:
-threading.Thread(target=start_telegram_bot, daemon=True).start()
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    web_app.run(host="0.0.0.0", port=port, use_reloader=False)
     
